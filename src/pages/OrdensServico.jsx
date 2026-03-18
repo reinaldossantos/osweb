@@ -235,10 +235,37 @@ export function OSDetalhe({ os, onClose }) {
   };
 
   const salvarStatus = async () => {
+    if (status === os.status) { toast("Status não foi alterado."); return; }
     setLoading(true);
-    const { error } = await supabase.from("ordens_servico").update({ status }).eq("id", os.id);
-    if (!error) { toast.success("Status atualizado!"); onClose(); }
-    setLoading(false);
+    try {
+      // 1. Atualiza o status da OS
+      const { error } = await supabase
+        .from("ordens_servico")
+        .update({ status, ...(status === "concluida" ? { data_conclusao: new Date().toISOString() } : {}) })
+        .eq("id", os.id);
+
+      if (error) throw error;
+
+      // 2. Registra no histórico com usuário e detalhes completos
+      const statusAnterior = STATUS_CONFIG[os.status]?.label || os.status;
+      const statusNovo     = STATUS_CONFIG[status]?.label     || status;
+
+      await supabase.from("os_historico").insert({
+        os_id:         os.id,
+        usuario_id:    usuario?.id || null,
+        tipo_evento:   "status_alterado",
+        descricao:     `Status alterado: ${statusAnterior} → ${statusNovo}`,
+        valor_anterior: os.status,
+        valor_novo:     status,
+      });
+
+      toast.success(`Status atualizado para "${statusNovo}"!`);
+      onClose();
+    } catch (err) {
+      toast.error("Erro ao atualizar: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -293,12 +320,31 @@ export function OSDetalhe({ os, onClose }) {
 
       {historico.length > 0 && (
         <div>
-          <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Histórico</h4>
+          <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Histórico de Alterações</h4>
           {historico.map(h => (
-            <div key={h.id} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: "1px solid #F3F4F6", fontSize: 12 }}>
-              <span style={{ color: "#6B7280", whiteSpace: "nowrap" }}>{fmtDateTime(h.created_at)}</span>
-              <span style={{ color: "#374151" }}>{h.descricao}</span>
-              {h.usuarios?.funcionarios?.nome && <span style={{ color: "#9CA3AF", marginLeft: "auto" }}>por {h.usuarios.funcionarios.nome}</span>}
+            <div key={h.id} style={{ display: "flex", gap: 10, padding: "10px 12px", marginBottom: 4, borderRadius: 8, background: "#F9FAFB", border: "1px solid #F3F4F6", fontSize: 12, alignItems: "flex-start" }}>
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ color: "#6B7280", whiteSpace: "nowrap", fontSize: 11 }}>{fmtDateTime(h.created_at)}</div>
+                {h.usuarios?.funcionarios?.nome && (
+                  <div style={{ color: "#7C3AED", fontSize: 11, fontWeight: 600, marginTop: 2 }}>
+                    {h.usuarios.funcionarios.nome}
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ color: "#374151", fontWeight: 500 }}>{h.descricao}</span>
+                {h.valor_anterior && h.valor_novo && (
+                  <div style={{ marginTop: 3, display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ background: "#FEE2E2", color: "#991B1B", padding: "1px 7px", borderRadius: 10, fontSize: 11 }}>
+                      {STATUS_CONFIG[h.valor_anterior]?.label || h.valor_anterior}
+                    </span>
+                    <span style={{ color: "#9CA3AF", fontSize: 11 }}>→</span>
+                    <span style={{ background: "#DCFCE7", color: "#166534", padding: "1px 7px", borderRadius: 10, fontSize: 11 }}>
+                      {STATUS_CONFIG[h.valor_novo]?.label || h.valor_novo}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -309,6 +355,7 @@ export function OSDetalhe({ os, onClose }) {
 
 // ─── ORDENS DE SERVIÇO (LISTA) ────────────────────────────────
 export function OrdensServico() {
+  const { usuario } = useAuth();
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ status: "", prioridade: "", busca: "" });
@@ -337,9 +384,29 @@ export function OrdensServico() {
     return true;
   });
 
-  const updateStatus = async (id, status) => {
-    await supabase.from("ordens_servico").update({ status }).eq("id", id);
-    toast.success("Status atualizado!"); loadOrdens();
+  const updateStatus = async (osItem, novoStatus) => {
+    if (novoStatus === osItem.status) return;
+    const { error } = await supabase
+      .from("ordens_servico")
+      .update({ status: novoStatus, ...(novoStatus === "concluida" ? { data_conclusao: new Date().toISOString() } : {}) })
+      .eq("id", osItem.id);
+
+    if (!error) {
+      const statusAnterior = STATUS_CONFIG[osItem.status]?.label || osItem.status;
+      const statusNovo     = STATUS_CONFIG[novoStatus]?.label    || novoStatus;
+      await supabase.from("os_historico").insert({
+        os_id:         osItem.id,
+        usuario_id:    usuario?.id || null,
+        tipo_evento:   "status_alterado",
+        descricao:     `Status alterado: ${statusAnterior} → ${statusNovo}`,
+        valor_anterior: osItem.status,
+        valor_novo:     novoStatus,
+      });
+      toast.success(`Status → "${statusNovo}"`);
+      loadOrdens();
+    } else {
+      toast.error("Erro: " + error.message);
+    }
   };
 
   return (
@@ -399,7 +466,7 @@ export function OrdensServico() {
                     <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => setSelectedOS(os)} style={{ ...btnSecondary, padding: "5px 8px", fontSize: 11 }}><Eye size={12} /></button>
-                        <select value={os.status} onChange={e => updateStatus(os.id, e.target.value)} style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #D1D5DB", borderRadius: 6, cursor: "pointer", background: "#fff" }}>
+                        <select value={os.status} onChange={e => updateStatus(os, e.target.value)} style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #D1D5DB", borderRadius: 6, cursor: "pointer", background: "#fff" }}>
                           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
                       </div>
