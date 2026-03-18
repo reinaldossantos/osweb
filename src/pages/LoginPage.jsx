@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { FormField } from "../components/components";
-import { inputStyle, btnPrimary } from "../constants/constants";
 import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
@@ -15,7 +13,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn(form.email, form.password);
-      toast.success("Login realizado com sucesso!");
+      toast.success("Login realizado!");
     } catch {
       toast.error("Email ou senha inválidos.");
     } finally {
@@ -25,28 +23,106 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "linear-gradient(135deg, #1E3A5F 0%, #1D4ED8 50%, #2563EB 100%)",
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "linear-gradient(145deg, #0F172A 0%, #1E3A8A 55%, #1D4ED8 100%)",
+      padding: 16,
     }}>
-      <div style={{ background: "#fff", borderRadius: 20, padding: 48, width: "100%", maxWidth: 400, boxShadow: "0 25px 80px rgba(0,0,0,0.3)" }}>
+      {/* Card */}
+      <div style={{
+        background: "#fff",
+        borderRadius: 20,
+        padding: "44px 40px",
+        width: "100%",
+        maxWidth: 400,
+        boxShadow: "0 32px 80px rgba(0,0,0,0.35)",
+      }}>
+
+        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <FileText size={32} color="#fff" />
+          <div style={{
+            width: 60, height: 60, borderRadius: 16,
+            background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 18px",
+            boxShadow: "0 8px 24px rgba(29,78,216,0.35)",
+          }}>
+            <FileText size={28} color="#fff" />
           </div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#111827" }}>VisualOS</h1>
-          <p style={{ margin: "6px 0 0", color: "#6B7280", fontSize: 14 }}>Sistema de Ordens de Serviço</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.5px", margin: 0 }}>
+            VisualOS
+          </h1>
+          <p style={{ margin: "6px 0 0", color: "#64748B", fontSize: 14, fontWeight: 400 }}>
+            Sistema de Ordens de Serviço
+          </p>
         </div>
+
+        {/* Form */}
         <form onSubmit={handleSubmit}>
-          <FormField label="Email">
-            <input type="email" value={form.email} required onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} placeholder="seu@email.com" />
-          </FormField>
-          <FormField label="Senha">
-            <input type="password" value={form.password} required onChange={e => setForm({ ...form, password: e.target.value })} style={inputStyle} placeholder="••••••••" />
-          </FormField>
-          <button type="submit" disabled={loading} style={{ ...btnPrimary, width: "100%", justifyContent: "center", padding: "12px", marginTop: 8 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Email
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              required
+              onChange={e => setForm({ ...form, email: e.target.value })}
+              placeholder="seu@email.com"
+              style={{
+                width: "100%", padding: "11px 14px",
+                border: "1.5px solid #E2E8F0", borderRadius: 10,
+                fontSize: 14, color: "#0F172A", outline: "none",
+                background: "#F8FAFC", transition: "border 0.15s",
+              }}
+              onFocus={e => e.target.style.borderColor = "#3B82F6"}
+              onBlur={e => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Senha
+            </label>
+            <input
+              type="password"
+              value={form.password}
+              required
+              onChange={e => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
+              style={{
+                width: "100%", padding: "11px 14px",
+                border: "1.5px solid #E2E8F0", borderRadius: 10,
+                fontSize: 14, color: "#0F172A", outline: "none",
+                background: "#F8FAFC", transition: "border 0.15s",
+              }}
+              onFocus={e => e.target.style.borderColor = "#3B82F6"}
+              onBlur={e => e.target.style.borderColor = "#E2E8F0"}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%", padding: "13px",
+              background: loading ? "#93C5FD" : "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+              color: "#fff", border: "none", borderRadius: 10,
+              fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: loading ? "none" : "0 4px 16px rgba(29,78,216,0.35)",
+              transition: "all 0.2s", letterSpacing: "0.2px",
+            }}
+          >
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+
+        {/* Footer */}
+        <p style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: "#CBD5E1" }}>
+          Comunicação Visual · VisualOS v1.0
+        </p>
       </div>
     </div>
   );

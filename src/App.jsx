@@ -4,41 +4,51 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import { OrdensServico, NovaOS } from "./pages/OrdensServico";
+import Relatorios from "./pages/Relatorios";
 import {
   PageClientes, PageFuncionarios, PageCargos, PageServicos,
   PageEtapas, PageTiposOS, PageFormasPagto, PageUsuarios,
 } from "./pages/CrudPages";
 import { NAV_ITEMS } from "./constants/constants";
-import Relatorios from "./pages/Relatorios";
 import { FileText, Menu, User, LogOut, ChevronRight } from "lucide-react";
 
 // ─── SIDEBAR ──────────────────────────────────────────────────
-function Sidebar({ page, setPage, sidebarOpen, setSidebarOpen, usuario, signOut, isAdmin }) {
+function Sidebar({ page, setPage, sidebarOpen, usuario, signOut, isAdmin }) {
   const navFiltered = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
 
   return (
-    <div style={{
-      width: sidebarOpen ? 260 : 0, minWidth: sidebarOpen ? 260 : 0,
-      background: "#0F172A", transition: "width 0.2s, min-width 0.2s",
-      overflow: "hidden", position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100,
-      display: "flex", flexDirection: "column",
+    <aside style={{
+      width: 252,
+      flexShrink: 0,
+      background: "#0F172A",
+      display: "flex",
+      flexDirection: "column",
+      height: "100vh",
+      position: "sticky",
+      top: 0,
+      transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+      transition: "transform 0.2s",
+      zIndex: 100,
+      overflow: "hidden",
     }}>
-      <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid #1E293B" }}>
+      {/* Logo */}
+      <div style={{ padding: "22px 20px 16px", borderBottom: "1px solid #1E293B", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ background: "#1D4ED8", borderRadius: 10, padding: 8, flexShrink: 0 }}>
             <FileText size={20} color="#fff" />
           </div>
           <div>
-            <div style={{ color: "#fff", fontWeight: 800, fontSize: 16, lineHeight: 1 }}>VisualOS</div>
-            <div style={{ color: "#64748B", fontSize: 11, marginTop: 2 }}>Comunicação Visual</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, letterSpacing: "-0.3px" }}>VisualOS</div>
+            <div style={{ color: "#475569", fontSize: 11, marginTop: 1 }}>Comunicação Visual</div>
           </div>
         </div>
       </div>
 
-      <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
         {navFiltered.map((item, i) => {
           if (item.key.startsWith("divider")) {
-            return <div key={i} style={{ height: 1, background: "#1E293B", margin: "8px 0" }} />;
+            return <div key={i} style={{ height: 1, background: "#1E293B", margin: "6px 8px" }} />;
           }
           const { Icon } = item;
           const active = page === item.key;
@@ -48,38 +58,46 @@ function Sidebar({ page, setPage, sidebarOpen, setSidebarOpen, usuario, signOut,
               onClick={() => setPage(item.key)}
               style={{
                 display: "flex", alignItems: "center", gap: 10, width: "100%",
-                padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                background: active ? "#1E40AF" : "transparent",
-                color: active ? "#fff" : "#94A3B8",
-                fontSize: 13, fontWeight: active ? 600 : 400, marginBottom: 2,
-                transition: "all 0.15s",
+                padding: "9px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                background: active ? "#1E3A8A" : "transparent",
+                color: active ? "#FFFFFF" : "#94A3B8",
+                fontSize: 13.5, fontWeight: active ? 600 : 400, marginBottom: 1,
+                transition: "all 0.12s", textAlign: "left",
               }}
             >
-              <Icon size={16} />
-              <span style={{ whiteSpace: "nowrap" }}>{item.label}</span>
-              {active && <ChevronRight size={12} style={{ marginLeft: "auto" }} />}
+              <Icon size={15} style={{ flexShrink: 0 }} />
+              <span style={{ whiteSpace: "nowrap", flex: 1 }}>{item.label}</span>
+              {active && <ChevronRight size={12} style={{ opacity: 0.7 }} />}
             </button>
           );
         })}
       </nav>
 
-      <div style={{ padding: "12px 10px", borderTop: "1px solid #1E293B" }}>
-        <div style={{ padding: "10px 12px", marginBottom: 6 }}>
-          <div style={{ color: "#CBD5E1", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      {/* User */}
+      <div style={{ padding: "10px 8px 14px", borderTop: "1px solid #1E293B", flexShrink: 0 }}>
+        <div style={{ padding: "8px 12px", marginBottom: 2 }}>
+          <div style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {usuario?.funcionarios?.nome || "Usuário"}
           </div>
-          <div style={{ color: "#64748B", fontSize: 11 }}>
+          <div style={{ color: "#64748B", fontSize: 11, marginTop: 2 }}>
             {usuario?.perfil === "admin" ? "Administrador" : "Usuário básico"}
           </div>
         </div>
         <button
           onClick={signOut}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "#94A3B8", fontSize: 13 }}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, width: "100%",
+            padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+            background: "transparent", color: "#64748B", fontSize: 13,
+            transition: "all 0.12s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#1E293B"; e.currentTarget.style.color = "#94A3B8"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748B"; }}
         >
           <LogOut size={14} /> Sair
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -92,10 +110,10 @@ function AppContent() {
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-          <FileText size={24} color="#fff" />
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <FileText size={26} color="#fff" />
         </div>
-        <p style={{ color: "#6B7280", fontSize: 14 }}>Carregando...</p>
+        <p style={{ color: "#94A3B8", fontSize: 14, margin: 0 }}>Carregando sistema...</p>
       </div>
     </div>
   );
@@ -103,17 +121,14 @@ function AppContent() {
   if (!user) return <LoginPage />;
 
   const isAdmin = usuario?.perfil === "admin";
-  const contentStyle = { flex: 1, padding: 28, maxWidth: 1280, width: "100%" };
 
-  // Cada componente é um módulo separado — React trata como tipo único
-  // Não há componente genérico reutilizado — navegação 100% isolada
   const renderContent = () => {
     switch (page) {
       case "dashboard":        return <Dashboard />;
       case "nova_os":          return (
-        <div style={contentStyle}>
-          <h1 style={{ margin: "0 0 24px", fontSize: 24, fontWeight: 800, color: "#111827" }}>Nova Ordem de Serviço</h1>
-          <div style={{ background: "#fff", borderRadius: 14, padding: 28, border: "1px solid #E5E7EB" }}>
+        <div>
+          <h1 style={{ margin: "0 0 24px", fontSize: 22, fontWeight: 700, color: "#0F172A" }}>Nova Ordem de Serviço</h1>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 28, border: "1px solid #E2E8F0" }}>
             <NovaOS onSaved={() => setPage("ordens_servico")} />
           </div>
         </div>
@@ -126,39 +141,58 @@ function AppContent() {
       case "etapas":           return <PageEtapas />;
       case "tipos_os":         return <PageTiposOS />;
       case "formas_pagamento": return <PageFormasPagto />;
-      case "usuarios":         return isAdmin ? <PageUsuarios /> : <p style={{ color: "#EF4444", padding: 40 }}>Acesso restrito.</p>;
+      case "usuarios":         return isAdmin ? <PageUsuarios /> : <p style={{ color: "#EF4444" }}>Acesso restrito.</p>;
       case "relatorios":       return <Relatorios />;
       default:                 return <Dashboard />;
     }
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F1F5F9" }}>
-      <Sidebar
-        page={page} setPage={setPage}
-        sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
-        usuario={usuario} signOut={signOut} isAdmin={isAdmin}
-      />
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#F1F5F9" }}>
 
-      <div style={{ flex: 1, marginLeft: sidebarOpen ? 260 : 0, transition: "margin-left 0.2s", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      {/* Sidebar — sticky, não rola com o conteúdo */}
+      {sidebarOpen && (
+        <Sidebar
+          page={page} setPage={setPage}
+          sidebarOpen={sidebarOpen}
+          usuario={usuario} signOut={signOut} isAdmin={isAdmin}
+        />
+      )}
+
+      {/* Main — coluna direita, rola independente */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+
         {/* Topbar */}
-        <div style={{ background: "#fff", padding: "14px 24px", borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 50 }}>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", padding: 4 }}>
+        <header style={{
+          background: "#fff", padding: "0 24px", height: 56,
+          borderBottom: "1px solid #E2E8F0", display: "flex", alignItems: "center",
+          gap: 12, flexShrink: 0, zIndex: 50,
+        }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", padding: 6, borderRadius: 6, display: "flex" }}
+          >
             <Menu size={20} />
           </button>
           <div style={{ flex: 1 }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <User size={16} color="#fff" />
             </div>
-            <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{usuario?.funcionarios?.nome || "Usuário"}</span>
+            <div>
+              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, lineHeight: 1.2 }}>{usuario?.funcionarios?.nome || "Usuário"}</div>
+              <div style={{ fontSize: 11, color: "#94A3B8" }}>{usuario?.perfil === "admin" ? "Administrador" : "Básico"}</div>
+            </div>
           </div>
-        </div>
+        </header>
 
-        {/* Conteúdo — key={page} garante desmontagem completa a cada troca */}
-        <div key={page} style={contentStyle}>
-          {renderContent()}
-        </div>
+        {/* Page content — rola verticalmente */}
+        <main key={page} style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+          <div style={{ padding: "28px 32px", maxWidth: 1400, width: "100%", boxSizing: "border-box" }}>
+            {renderContent()}
+          </div>
+        </main>
+
       </div>
     </div>
   );
@@ -170,7 +204,10 @@ export default function App() {
     <AuthProvider>
       <Toaster
         position="top-right"
-        toastOptions={{ duration: 3000, style: { background: "#1F2937", color: "#fff", borderRadius: 10, fontSize: 14 } }}
+        toastOptions={{
+          duration: 3500,
+          style: { background: "#0F172A", color: "#F8FAFC", borderRadius: 10, fontSize: 13.5, fontWeight: 500 },
+        }}
       />
       <AppContent />
     </AuthProvider>
