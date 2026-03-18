@@ -20,7 +20,7 @@ function SectionCard({ title, icon: Icon, children }) {
   return (
     <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", overflow: "hidden", marginBottom: 24 }}>
       <div style={{ padding: "16px 24px", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: 10, background: "#F9FAFB" }}>
-        {Icon && <Icon size={18} color="#1D4ED8" />}
+        {Icon && <Icon size={18} color="#7C3AED" />}
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{title}</h2>
       </div>
       <div style={{ padding: 24 }}>{children}</div>
@@ -108,7 +108,7 @@ export default function Relatorios() {
             <span style={{ fontSize: 13, color: "#6B7280" }}>{lista.length} OS · {fmt(valor)}</span>
           </div>
           <div style={{ height: 8, background: "#F3F4F6", borderRadius: 4 }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: "#1D4ED8", borderRadius: 4 }} />
+            <div style={{ height: "100%", width: `${pct}%`, background: "#7C3AED", borderRadius: 4 }} />
           </div>
         </div>
       );
@@ -135,7 +135,7 @@ export default function Relatorios() {
             return (
               <tr key={tipo} style={{ borderTop: "1px solid #F3F4F6", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                 <td style={{ padding: "12px 16px", fontWeight: 500 }}>{tipo}</td>
-                <td style={{ padding: "12px 16px" }}><span style={{ background: "#EFF6FF", color: "#1D4ED8", borderRadius: 20, padding: "2px 10px", fontWeight: 700, fontSize: 12 }}>{lista.length}</span></td>
+                <td style={{ padding: "12px 16px" }}><span style={{ background: "#F5F3FF", color: "#7C3AED", borderRadius: 20, padding: "2px 10px", fontWeight: 700, fontSize: 12 }}>{lista.length}</span></td>
                 <td style={{ padding: "12px 16px", color: "#6B7280" }}>{Math.round((lista.length / ordens.length) * 100)}%</td>
                 <td style={{ padding: "12px 16px", fontWeight: 600 }}>{fmt(valor)}</td>
                 <td style={{ padding: "12px 16px", color: "#6B7280" }}>{fmt(lista.length > 0 ? valor / lista.length : 0)}</td>
@@ -158,7 +158,7 @@ export default function Relatorios() {
     const valorCanc   = canceladas.reduce((s, o) => s + (o.valor_total || 0), 0);
 
     const summaryCards = [
-      { label: "Faturamento Total",   value: fmt(valorTotal),                              color: "#1D4ED8", bg: "#EFF6FF" },
+      { label: "Faturamento Total",   value: fmt(valorTotal),                              color: "#7C3AED", bg: "#F5F3FF" },
       { label: "Valor Concluído",     value: fmt(valorConc),                               color: "#16A34A", bg: "#DCFCE7" },
       { label: "Valor em Aberto",     value: fmt(valorAberto),                             color: "#D97706", bg: "#FEF3C7" },
       { label: "Valor Cancelado",     value: fmt(valorCanc),                               color: "#DC2626", bg: "#FEF2F2" },
@@ -188,7 +188,7 @@ export default function Relatorios() {
           <tbody>
             {[...ordens].sort((a, b) => (b.valor_total || 0) - (a.valor_total || 0)).slice(0, 10).map((os, i) => (
               <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
-                <td style={{ padding: "12px 16px", fontWeight: 700, color: "#1D4ED8" }}>#{os.numero_os}</td>
+                <td style={{ padding: "12px 16px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                 <td style={{ padding: "12px 16px" }}>{os.clientes?.nome || "—"}</td>
                 <td style={{ padding: "12px 16px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
                 <td style={{ padding: "12px 16px" }}><StatusBadge status={os.status} /></td>
@@ -218,12 +218,12 @@ export default function Relatorios() {
             ? <tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS no período.</td></tr>
             : ordens.map((os, i) => (
               <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
-                <td style={{ padding: "10px 14px", fontWeight: 700, color: "#1D4ED8" }}>#{os.numero_os}</td>
+                <td style={{ padding: "10px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                 <td style={{ padding: "10px 14px", color: "#6B7280", whiteSpace: "nowrap" }}>{fmtDate(os.data_lancamento)}</td>
                 <td style={{ padding: "10px 14px" }}>{os.clientes?.nome || "—"}</td>
                 <td style={{ padding: "10px 14px", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
                 <td style={{ padding: "10px 14px" }}>
-                  {os.tipos_os && <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{os.tipos_os.codigo}</span>}
+                  {os.tipos_os && <span style={{ background: "#F5F3FF", color: "#7C3AED", padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{os.tipos_os.codigo}</span>}
                 </td>
                 <td style={{ padding: "10px 14px" }}><StatusBadge status={os.status} /></td>
                 <td style={{ padding: "10px 14px", color: isAtrasada(os) ? "#DC2626" : "#374151", whiteSpace: "nowrap", fontWeight: isAtrasada(os) ? 700 : 400 }}>
@@ -255,8 +255,8 @@ export default function Relatorios() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ background: "#EFF6FF", borderRadius: 10, padding: 10 }}>
-            <BarChart3 size={20} color="#1D4ED8" />
+          <div style={{ background: "#F5F3FF", borderRadius: 10, padding: 10 }}>
+            <BarChart3 size={20} color="#7C3AED" />
           </div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#111827" }}>Relatórios</h1>
         </div>
@@ -287,7 +287,7 @@ export default function Relatorios() {
             display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
             borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
             background: abaAtiva === key ? "#fff" : "transparent",
-            color: abaAtiva === key ? "#1D4ED8" : "#6B7280",
+            color: abaAtiva === key ? "#7C3AED" : "#6B7280",
             boxShadow: abaAtiva === key ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
             transition: "all 0.15s",
           }}>

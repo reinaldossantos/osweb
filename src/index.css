@@ -69,25 +69,25 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #DDD6FE;
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #C4B5FD;
 }
 
 /* ── Focus ring ───────────────────────────────────────────── */
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid #3B82F6;
+  outline: 2px solid #A78BFA;
   outline-offset: 0px;
-  border-color: #3B82F6 !important;
+  border-color: #A78BFA !important;
 }
 
 button:focus-visible {
-  outline: 2px solid #3B82F6;
+  outline: 2px solid #A78BFA;
   outline-offset: 2px;
 }
 

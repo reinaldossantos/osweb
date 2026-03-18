@@ -179,7 +179,7 @@ function EtapasDoServico({ servico, onClose }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, padding: "12px 16px", background: "#F0F9FF", borderRadius: 10, border: "1px solid #BAE6FD" }}>
+      <div style={{ marginBottom: 16, padding: "12px 16px", background: "#F5F3FF", borderRadius: 10, border: "1px solid #DDD6FE" }}>
         <div style={{ display: "flex", gap: 24, fontSize: 13 }}>
           <span><strong>Unidade:</strong> {servico.unidade || "—"}</span>
           <span><strong>Valor Base:</strong> {fmt(servico.valor_base)}</span>
@@ -207,7 +207,7 @@ function EtapasDoServico({ servico, onClose }) {
             {etapas.map((etapa, i) => (
               <tr key={etapa.id} style={{ borderTop: "1px solid #F3F4F6", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                 <td style={{ padding: "12px 16px" }}>
-                  <span style={{ background: "#EFF6FF", color: "#1D4ED8", borderRadius: 20, padding: "2px 10px", fontWeight: 700, fontSize: 12 }}>
+                  <span style={{ background: "#F5F3FF", color: "#7C3AED", borderRadius: 20, padding: "2px 10px", fontWeight: 700, fontSize: 12 }}>
                     {etapa.ordem}
                   </span>
                 </td>
@@ -267,7 +267,7 @@ export function PageServicos() {
                 <td style={{ padding: "12px 16px" }}>
                   <button
                     onClick={() => setViewEtapas(item)}
-                    style={{ background: "#F0F9FF", color: "#0369A1", border: "1px solid #BAE6FD", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+                    style={{ background: "#F5F3FF", color: "#5B21B6", border: "1px solid #DDD6FE", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                   >
                     <Layers size={12} /> Ver etapas
                   </button>
@@ -380,7 +380,7 @@ export function PageTiposOS() {
             {filtered.length === 0 ? <EmptyRow cols={3} /> : filtered.map((item, i) => (
               <tr key={item.id} style={{ borderTop: "1px solid #F3F4F6", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                 <td style={{ padding: "12px 16px" }}>
-                  <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
+                  <span style={{ background: "#F5F3FF", color: "#7C3AED", padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
                     {item.codigo}
                   </span>
                 </td>
@@ -483,7 +483,7 @@ export function PageUsuarios() {
                 <td style={{ padding: "12px 16px" }}>{item.funcionarios?.nome || "—"}</td>
                 <td style={{ padding: "12px 16px", color: "#6B7280" }}>{item.funcionarios?.email || "—"}</td>
                 <td style={{ padding: "12px 16px" }}>
-                  <span style={{ background: item.perfil === "admin" ? "#FEF3C7" : "#EFF6FF", color: item.perfil === "admin" ? "#92400E" : "#1E40AF", padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
+                  <span style={{ background: item.perfil === "admin" ? "#FEF3C7" : "#F5F3FF", color: item.perfil === "admin" ? "#92400E" : "#6D28D9", padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600 }}>
                     {item.perfil === "admin" ? "Admin" : "Básico"}
                   </span>
                 </td>

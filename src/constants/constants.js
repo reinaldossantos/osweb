@@ -6,7 +6,7 @@ import {
 
 export const STATUS_CONFIG = {
   aguardando:           { label: "Aguardando",       Icon: Clock,        bg: "#FEF9C3", text: "#854D0E", border: "#FDE047" },
-  em_producao:          { label: "Em Produção",       Icon: PlayCircle,   bg: "#DBEAFE", text: "#1E40AF", border: "#93C5FD" },
+  em_producao:          { label: "Em Produção",       Icon: PlayCircle,   bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" },
   aguardando_aprovacao: { label: "Aguard. Aprovação", Icon: AlertCircle,  bg: "#FED7AA", text: "#9A3412", border: "#FB923C" },
   concluida:            { label: "Concluída",         Icon: CheckCircle2, bg: "#DCFCE7", text: "#166534", border: "#86EFAC" },
   cancelada:            { label: "Cancelada",         Icon: XCircle,      bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
@@ -14,7 +14,7 @@ export const STATUS_CONFIG = {
 
 export const PRIORIDADE_CONFIG = {
   baixa:   { label: "Baixa",   color: "#6B7280", bg: "#F3F4F6" },
-  normal:  { label: "Normal",  color: "#2563EB", bg: "#EFF6FF" },
+  normal:  { label: "Normal",  color: "#8B5CF6", bg: "#F5F3FF" },
   alta:    { label: "Alta",    color: "#D97706", bg: "#FEF3C7" },
   urgente: { label: "Urgente", color: "#DC2626", bg: "#FEF2F2" },
 };
@@ -67,7 +67,7 @@ export const inputStyle = {
 };
 
 export const btnPrimary = {
-  background: "#1D4ED8", color: "#fff", border: "none",
+  background: "#7C3AED", color: "#fff", border: "none",
   padding: "10px 20px", borderRadius: 8, fontSize: 14,
   fontWeight: 600, cursor: "pointer", display: "inline-flex",
   alignItems: "center", gap: 6,

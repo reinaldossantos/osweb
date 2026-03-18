@@ -85,8 +85,8 @@ export function ListPage({ title, icon: Icon, onNew, count, busca, setBusca, chi
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {Icon && (
-            <div style={{ background: "#EFF6FF", borderRadius: 10, padding: 10 }}>
-              <Icon size={20} color="#1D4ED8" />
+            <div style={{ background: "#F5F3FF", borderRadius: 10, padding: 10 }}>
+              <Icon size={20} color="#7C3AED" />
             </div>
           )}
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#111827" }}>{title}</h1>

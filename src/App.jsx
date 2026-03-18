@@ -20,7 +20,7 @@ function Sidebar({ page, setPage, sidebarOpen, usuario, signOut, isAdmin }) {
     <aside style={{
       width: 252,
       flexShrink: 0,
-      background: "#0F172A",
+      background: "#130F23",
       display: "flex",
       flexDirection: "column",
       height: "100vh",
@@ -34,12 +34,12 @@ function Sidebar({ page, setPage, sidebarOpen, usuario, signOut, isAdmin }) {
       {/* Logo */}
       <div style={{ padding: "22px 20px 16px", borderBottom: "1px solid #1E293B", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ background: "#1D4ED8", borderRadius: 10, padding: 8, flexShrink: 0 }}>
+          <div style={{ background: "#7C3AED", borderRadius: 10, padding: 8, flexShrink: 0 }}>
             <FileText size={20} color="#fff" />
           </div>
           <div>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, letterSpacing: "-0.3px" }}>VisualOS</div>
-            <div style={{ color: "#475569", fontSize: 11, marginTop: 1 }}>Comunicação Visual</div>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, letterSpacing: "-0.3px" }}>OSWeb 1.0</div>
+            <div style={{ color: "#475569", fontSize: 11, marginTop: 1 }}>Gestão de O.S.</div>
           </div>
         </div>
       </div>
@@ -59,7 +59,7 @@ function Sidebar({ page, setPage, sidebarOpen, usuario, signOut, isAdmin }) {
               style={{
                 display: "flex", alignItems: "center", gap: 10, width: "100%",
                 padding: "9px 12px", borderRadius: 8, border: "none", cursor: "pointer",
-                background: active ? "#1E3A8A" : "transparent",
+                background: active ? "#5B21B6" : "transparent",
                 color: active ? "#FFFFFF" : "#94A3B8",
                 fontSize: 13.5, fontWeight: active ? 600 : 400, marginBottom: 1,
                 transition: "all 0.12s", textAlign: "left",
@@ -110,7 +110,7 @@ function AppContent() {
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8FAFC" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 52, height: 52, borderRadius: 14, background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
           <FileText size={26} color="#fff" />
         </div>
         <p style={{ color: "#94A3B8", fontSize: 14, margin: 0 }}>Carregando sistema...</p>
@@ -176,7 +176,7 @@ function AppContent() {
           </button>
           <div style={{ flex: 1 }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#1D4ED8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <User size={16} color="#fff" />
             </div>
             <div>
@@ -206,7 +206,7 @@ export default function App() {
         position="top-right"
         toastOptions={{
           duration: 3500,
-          style: { background: "#0F172A", color: "#F8FAFC", borderRadius: 10, fontSize: 13.5, fontWeight: 500 },
+          style: { background: "#130F23", color: "#F8FAFC", borderRadius: 10, fontSize: 13.5, fontWeight: 500 },
         }}
       />
       <AppContent />

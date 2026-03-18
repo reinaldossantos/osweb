@@ -159,15 +159,15 @@ export function NovaOS({ onSaved }) {
             </select>
           </FormField>
           {etapasDisponiveis.length > 0 && (
-            <div style={{ background: "#F0F9FF", borderRadius: 10, padding: 16, marginBottom: 16, border: "1px solid #BAE6FD" }}>
-              <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#0369A1" }}>
+            <div style={{ background: "#F5F3FF", borderRadius: 10, padding: 16, marginBottom: 16, border: "1px solid #DDD6FE" }}>
+              <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#5B21B6" }}>
                 <Layers size={14} style={{ verticalAlign: "middle", marginRight: 4 }} />
                 Etapas do Serviço
               </p>
               {etapasDisponiveis.map((e, i) => (
                 <label key={e.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
                   <div onClick={() => toggleEtapa(e.id)} style={{ cursor: "pointer" }}>
-                    {etapasSelecionadas.includes(e.id) ? <CheckSquare size={18} color="#0369A1" /> : <Square size={18} color="#9CA3AF" />}
+                    {etapasSelecionadas.includes(e.id) ? <CheckSquare size={18} color="#5B21B6" /> : <Square size={18} color="#9CA3AF" />}
                   </div>
                   <span style={{ fontSize: 13, color: "#374151" }}>{i + 1}. {e.nome}</span>
                   {e.duracao_estimada_horas && <span style={{ fontSize: 11, color: "#6B7280", marginLeft: "auto" }}>{e.duracao_estimada_horas}h</span>}
@@ -380,12 +380,12 @@ export function OrdensServico() {
                 ? <tr><td colSpan={10} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS encontrada</td></tr>
                 : filtradas.map((os, i) => (
                   <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
-                    <td style={{ padding: "12px 14px", fontWeight: 700, color: "#1D4ED8" }}>#{os.numero_os}</td>
+                    <td style={{ padding: "12px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                     <td style={{ padding: "12px 14px", color: "#6B7280", whiteSpace: "nowrap" }}>{fmtDate(os.data_lancamento)}</td>
                     <td style={{ padding: "12px 14px" }}>{os.clientes?.nome || "—"}</td>
                     <td style={{ padding: "12px 14px", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
                     <td style={{ padding: "12px 14px" }}>
-                      {os.tipos_os && <span style={{ background: "#EFF6FF", color: "#1D4ED8", padding: "2px 7px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{os.tipos_os.codigo}</span>}
+                      {os.tipos_os && <span style={{ background: "#F5F3FF", color: "#7C3AED", padding: "2px 7px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{os.tipos_os.codigo}</span>}
                     </td>
                     <td style={{ padding: "12px 14px" }}><StatusBadge status={os.status} /></td>
                     <td style={{ padding: "12px 14px" }}><PrioridadeBadge prioridade={os.prioridade} /></td>

@@ -27,7 +27,7 @@ export default function LoginPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(145deg, #0F172A 0%, #1E3A8A 55%, #1D4ED8 100%)",
+      background: "linear-gradient(145deg, #0F172A 0%, #4C1D95 55%, #7C3AED 100%)",
       padding: 16,
     }}>
       {/* Card */}
@@ -44,15 +44,15 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{
             width: 60, height: 60, borderRadius: 16,
-            background: "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+            background: "linear-gradient(135deg, #7C3AED, #A78BFA)",
             display: "flex", alignItems: "center", justifyContent: "center",
             margin: "0 auto 18px",
-            boxShadow: "0 8px 24px rgba(29,78,216,0.35)",
+            boxShadow: "0 8px 28px rgba(109,40,217,0.45)",
           }}>
             <FileText size={28} color="#fff" />
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#0F172A", letterSpacing: "-0.5px", margin: 0 }}>
-            VisualOS
+            OSWeb 1.0
           </h1>
           <p style={{ margin: "6px 0 0", color: "#64748B", fontSize: 14, fontWeight: 400 }}>
             Sistema de Ordens de Serviço
@@ -77,7 +77,7 @@ export default function LoginPage() {
                 fontSize: 14, color: "#0F172A", outline: "none",
                 background: "#F8FAFC", transition: "border 0.15s",
               }}
-              onFocus={e => e.target.style.borderColor = "#3B82F6"}
+              onFocus={e => e.target.style.borderColor = "#A78BFA"}
               onBlur={e => e.target.style.borderColor = "#E2E8F0"}
             />
           </div>
@@ -98,7 +98,7 @@ export default function LoginPage() {
                 fontSize: 14, color: "#0F172A", outline: "none",
                 background: "#F8FAFC", transition: "border 0.15s",
               }}
-              onFocus={e => e.target.style.borderColor = "#3B82F6"}
+              onFocus={e => e.target.style.borderColor = "#A78BFA"}
               onBlur={e => e.target.style.borderColor = "#E2E8F0"}
             />
           </div>
@@ -108,10 +108,10 @@ export default function LoginPage() {
             disabled={loading}
             style={{
               width: "100%", padding: "13px",
-              background: loading ? "#93C5FD" : "linear-gradient(135deg, #1D4ED8, #3B82F6)",
+              background: loading ? "#DDD6FE" : "linear-gradient(135deg, #7C3AED, #A78BFA)",
               color: "#fff", border: "none", borderRadius: 10,
               fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-              boxShadow: loading ? "none" : "0 4px 16px rgba(29,78,216,0.35)",
+              boxShadow: loading ? "none" : "0 4px 20px rgba(109,40,217,0.45)",
               transition: "all 0.2s", letterSpacing: "0.2px",
             }}
           >
@@ -121,7 +121,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: "#CBD5E1" }}>
-          Comunicação Visual · VisualOS v1.0
+          Gestão de O.S. · OSWeb 1.0
         </p>
       </div>
     </div>

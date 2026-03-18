@@ -37,10 +37,10 @@ function OSListModal({ title, ordens, onClose }) {
                     key={os.id}
                     onClick={() => setSelectedOS(os)}
                     style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer", transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#EFF6FF"}
+                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
                     onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
                   >
-                    <td style={{ padding: "12px 14px", fontWeight: 700, color: "#1D4ED8" }}>#{os.numero_os}</td>
+                    <td style={{ padding: "12px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                     <td style={{ padding: "12px 14px" }}>{os.clientes?.nome || "—"}</td>
                     <td style={{ padding: "12px 14px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
                     <td style={{ padding: "12px 14px" }}><StatusBadge status={os.status} /></td>
@@ -118,11 +118,11 @@ export default function Dashboard() {
 
   const cards = [
     {
-      label: "Total de OS",   value: stats.total,       Icon: FileText,      color: "#1D4ED8", bg: "#EFF6FF",
+      label: "Total de OS",   value: stats.total,       Icon: FileText,      color: "#7C3AED", bg: "#F5F3FF",
       filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true),
     },
     {
-      label: "Em Produção",   value: stats.em_producao, Icon: PlayCircle,    color: "#2563EB", bg: "#DBEAFE",
+      label: "Em Produção",   value: stats.em_producao, Icon: PlayCircle,    color: "#8B5CF6", bg: "#EDE9FE",
       filtro: () => abrirFiltro("OS Em Produção", o => o.status === "em_producao"),
     },
     {
@@ -152,7 +152,7 @@ export default function Dashboard() {
   ];
 
   const valorCards = [
-    { label: "Valor Total Geral", value: fmt(stats.valorTotal),      Icon: DollarSign, color: "#1D4ED8",
+    { label: "Valor Total Geral", value: fmt(stats.valorTotal),      Icon: DollarSign, color: "#7C3AED",
       filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true) },
     { label: "Valor em Aberto",   value: fmt(stats.valorAbertas),    Icon: BarChart3,  color: "#D97706",
       filtro: () => abrirFiltro("OS em Aberto", o => !["concluida","cancelada"].includes(o.status)) },
@@ -268,10 +268,10 @@ export default function Dashboard() {
                     key={os.id}
                     onClick={() => setUltimaOS(os)}
                     style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#EFF6FF"}
+                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
                     onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
                   >
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "#1D4ED8" }}>#{os.numero_os}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                     <td style={{ padding: "12px 16px" }}>{os.clientes?.nome || "—"}</td>
                     <td style={{ padding: "12px 16px", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
                     <td style={{ padding: "12px 16px" }}><StatusBadge status={os.status} /></td>
