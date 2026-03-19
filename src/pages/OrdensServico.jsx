@@ -70,12 +70,43 @@ export function NovaOS({ onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.cliente_id) { toast.error("Selecione um cliente"); return; }
+
+    // ── Validações obrigatórias ─────────────────────────────
+    if (!form.titulo?.trim()) {
+      toast.error("⚠️ Informe o título da O.S.");
+      return;
+    }
+    if (!form.cliente_id) {
+      toast.error("⚠️ Selecione um cliente.");
+      return;
+    }
+
+    // ── Sanitiza campos UUID opcionais: "" → null ────────────
+    // O PostgreSQL não aceita string vazia em campos UUID
+    const uuidOuNull = (v) => (v && v.trim() !== "" ? v : null);
+    const payload = {
+      titulo:               form.titulo.trim(),
+      descricao:            form.descricao || null,
+      observacoes_internas: form.observacoes_internas || null,
+      cliente_id:           form.cliente_id,
+      tipo_os_id:           uuidOuNull(form.tipo_os_id),
+      servico_id:           uuidOuNull(form.servico_id),
+      forma_pagamento_id:   uuidOuNull(form.forma_pagamento_id),
+      status:               form.status,
+      prioridade:           form.prioridade,
+      data_entrega_prevista: form.data_entrega_prevista || null,
+      valor_total:          parseFloat(form.valor_total) || 0,
+      usuario_lancamento_id: usuario.id,
+    };
+
     setLoading(true);
     try {
-      const { data: os, error } = await supabase.from("ordens_servico")
-        .insert({ ...form, usuario_lancamento_id: usuario.id, valor_total: parseFloat(form.valor_total) || 0 })
-        .select().single();
+      const { data: os, error } = await supabase
+        .from("ordens_servico")
+        .insert(payload)
+        .select()
+        .single();
+
       if (error) throw error;
 
       if (etapasSelecionadas.length > 0) {
@@ -85,14 +116,35 @@ export function NovaOS({ onSaved }) {
         await supabase.from("os_etapas").insert(etapasParaInserir);
       }
       if (itens.length > 0) {
-        await supabase.from("os_itens").insert(itens.map(it => ({ ...it, os_id: os.id })));
+        await supabase.from("os_itens").insert(
+          itens.map(it => ({
+            os_id:         os.id,
+            servico_id:    uuidOuNull(it.servico_id),
+            descricao:     it.descricao,
+            quantidade:    parseFloat(it.quantidade) || 1,
+            valor_unitario: parseFloat(it.valor_unitario) || 0,
+          }))
+        );
       }
-      await supabase.from("os_historico").insert({ os_id: os.id, usuario_id: usuario.id, tipo_evento: "criada", descricao: "OS criada" });
+      await supabase.from("os_historico").insert({
+        os_id: os.id, usuario_id: usuario.id,
+        tipo_evento: "criada", descricao: "OS criada",
+      });
 
-      toast.success(`O.S. #${os.numero_os} criada com sucesso!`);
+      toast.success(`✅ O.S. #${os.numero_os} criada com sucesso!`);
       onSaved && onSaved(os);
     } catch (err) {
-      toast.error("Erro: " + err.message);
+      // Mensagem amigável para erros comuns
+      const msg = err.message || "";
+      if (msg.includes("uuid")) {
+        toast.error("⚠️ Erro de preenchimento: verifique os campos de seleção e tente novamente.");
+      } else if (msg.includes("violates foreign key")) {
+        toast.error("⚠️ Registro inválido selecionado. Verifique cliente, tipo ou serviço.");
+      } else if (msg.includes("not-null")) {
+        toast.error("⚠️ Preencha todos os campos obrigatórios antes de salvar.");
+      } else {
+        toast.error("⚠️ Erro ao criar O.S.: " + msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -106,10 +158,21 @@ export function NovaOS({ onSaved }) {
         <div>
           <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: 1 }}>Dados da O.S.</h3>
           <FormField label="Título" required>
-            <input style={inputStyle} value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} placeholder="Descreva brevemente o serviço" required />
+            <input
+              style={{ ...inputStyle, borderColor: !form.titulo?.trim() && form._touched?.titulo ? "#EF4444" : "#D1D5DB" }}
+              value={form.titulo}
+              onChange={e => setForm({ ...form, titulo: e.target.value, _touched: { ...form._touched, titulo: true } })}
+              placeholder="Descreva brevemente o serviço"
+              required
+            />
           </FormField>
           <FormField label="Cliente" required>
-            <select style={sel} value={form.cliente_id} onChange={e => setForm({ ...form, cliente_id: e.target.value })} required>
+            <select
+              style={{ ...sel, borderColor: !form.cliente_id && form._touched?.cliente ? "#EF4444" : "#D1D5DB" }}
+              value={form.cliente_id}
+              onChange={e => setForm({ ...form, cliente_id: e.target.value, _touched: { ...form._touched, cliente: true } })}
+              required
+            >
               <option value="">Selecione o cliente...</option>
               {refs.clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
@@ -239,11 +302,32 @@ export function EditarOS({ os, onSaved, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validações
+    if (!form.titulo?.trim()) { toast.error("⚠️ Informe o título da O.S."); return; }
+    if (!form.cliente_id)     { toast.error("⚠️ Selecione um cliente."); return; }
+
+    // Sanitiza UUIDs opcionais
+    const uuidOuNull = (v) => (v && v.trim() !== "" ? v : null);
+    const payload = {
+      titulo:               form.titulo.trim(),
+      descricao:            form.descricao || null,
+      observacoes_internas: form.observacoes_internas || null,
+      cliente_id:           form.cliente_id,
+      tipo_os_id:           uuidOuNull(form.tipo_os_id),
+      servico_id:           uuidOuNull(form.servico_id),
+      forma_pagamento_id:   uuidOuNull(form.forma_pagamento_id),
+      status:               form.status,
+      prioridade:           form.prioridade,
+      data_entrega_prevista: form.data_entrega_prevista || null,
+      valor_total:          parseFloat(form.valor_total) || 0,
+    };
+
     setLoading(true);
     try {
       const { error } = await supabase
         .from("ordens_servico")
-        .update({ ...form, valor_total: parseFloat(form.valor_total) || 0 })
+        .update(payload)
         .eq("id", os.id);
       if (error) throw error;
 
@@ -266,7 +350,12 @@ export function EditarOS({ os, onSaved, onClose }) {
       toast.success(`O.S. #${os.numero_os} atualizada!`);
       onSaved();
     } catch (err) {
-      toast.error("Erro: " + err.message);
+      const msg = err.message || "";
+      if (msg.includes("uuid")) {
+        toast.error("⚠️ Erro de preenchimento: verifique os campos de seleção.");
+      } else {
+        toast.error("⚠️ Erro ao salvar O.S.: " + msg);
+      }
     } finally {
       setLoading(false);
     }
