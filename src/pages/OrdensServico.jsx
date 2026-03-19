@@ -4,14 +4,14 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { Modal, FormField, StatusBadge, PrioridadeBadge } from "../components/components";
 import { STATUS_CONFIG, PRIORIDADE_CONFIG, fmt, fmtDate, fmtDateTime, isAtrasada, isHoje, inputStyle, btnPrimary, btnSecondary, btnDanger } from "../constants/constants";
-import { Plus, Search, Eye, Trash2, Layers, CheckSquare, Square } from "lucide-react";
+import { Plus, Search, Eye, Edit2, Layers, CheckSquare, Square } from "lucide-react";
 
 // ─── NOVA OS FORM ─────────────────────────────────────────────
 export function NovaOS({ onSaved }) {
   const { usuario } = useAuth();
   const [form, setForm] = useState({
     titulo: "", descricao: "", cliente_id: "", tipo_os_id: "",
-    servico_id: "", forma_pagamento_id: "", status: "aguardando",
+    servico_id: "", forma_pagamento_id: "", status: "em_aberto",
     prioridade: "normal", data_entrega_prevista: "", valor_total: "",
     observacoes_internas: "",
   });
@@ -206,6 +206,151 @@ export function NovaOS({ onSaved }) {
   );
 }
 
+// ─── EDITAR OS FORM ──────────────────────────────────────────
+export function EditarOS({ os, onSaved, onClose }) {
+  const { usuario } = useAuth();
+  const [form, setForm] = useState({
+    titulo:               os.titulo               || "",
+    descricao:            os.descricao            || "",
+    cliente_id:           os.cliente_id           || "",
+    tipo_os_id:           os.tipo_os_id           || "",
+    servico_id:           os.servico_id           || "",
+    forma_pagamento_id:   os.forma_pagamento_id   || "",
+    status:               os.status               || "em_aberto",
+    prioridade:           os.prioridade           || "normal",
+    data_entrega_prevista: os.data_entrega_prevista ? os.data_entrega_prevista.split("T")[0] : "",
+    valor_total:          os.valor_total          || "",
+    observacoes_internas: os.observacoes_internas || "",
+  });
+  const [refs, setRefs] = useState({ clientes: [], tipos: [], servicos: [], pagamentos: [] });
+  const [loading, setLoading] = useState(false);
+  const sel = { ...inputStyle, appearance: "none" };
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("tipos_os").select("id, codigo, nome").eq("ativo", true).order("codigo"),
+      supabase.from("servicos").select("id, nome, valor_base").eq("ativo", true).order("nome"),
+      supabase.from("formas_pagamento").select("id, nome").eq("ativo", true).order("nome"),
+    ]).then(([{data:c},{data:t},{data:s},{data:p}]) =>
+      setRefs({ clientes: c||[], tipos: t||[], servicos: s||[], pagamentos: p||[] })
+    );
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("ordens_servico")
+        .update({ ...form, valor_total: parseFloat(form.valor_total) || 0 })
+        .eq("id", os.id);
+      if (error) throw error;
+
+      // Registra alteração no histórico se status mudou
+      if (form.status !== os.status) {
+        const anterior = STATUS_CONFIG[os.status]?.label || os.status;
+        const novo     = STATUS_CONFIG[form.status]?.label || form.status;
+        await supabase.from("os_historico").insert({
+          os_id: os.id, usuario_id: usuario?.id || null,
+          tipo_evento: "status_alterado",
+          descricao: `Status alterado: ${anterior} → ${novo}`,
+          valor_anterior: os.status, valor_novo: form.status,
+        });
+      } else {
+        await supabase.from("os_historico").insert({
+          os_id: os.id, usuario_id: usuario?.id || null,
+          tipo_evento: "editada", descricao: "OS editada",
+        });
+      }
+      toast.success(`O.S. #${os.numero_os} atualizada!`);
+      onSaved();
+    } catch (err) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div>
+          <FormField label="Título" required>
+            <input style={inputStyle} value={form.titulo} onChange={e => setForm({...form, titulo: e.target.value})} required />
+          </FormField>
+          <FormField label="Cliente" required>
+            <select style={sel} value={form.cliente_id} onChange={e => setForm({...form, cliente_id: e.target.value})} required>
+              <option value="">Selecione...</option>
+              {refs.clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </FormField>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <FormField label="Tipo de O.S.">
+              <select style={sel} value={form.tipo_os_id} onChange={e => setForm({...form, tipo_os_id: e.target.value})}>
+                <option value="">Selecione...</option>
+                {refs.tipos.map(t => <option key={t.id} value={t.id}>[{t.codigo}] {t.nome}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Forma de Pagamento">
+              <select style={sel} value={form.forma_pagamento_id} onChange={e => setForm({...form, forma_pagamento_id: e.target.value})}>
+                <option value="">Selecione...</option>
+                {refs.pagamentos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </select>
+            </FormField>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <FormField label="Status">
+              <select style={sel} value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
+                {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Prioridade">
+              <select style={sel} value={form.prioridade} onChange={e => setForm({...form, prioridade: e.target.value})}>
+                {Object.entries(PRIORIDADE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </FormField>
+          </div>
+          <FormField label="Data de Entrega Prevista">
+            <input type="date" style={inputStyle} value={form.data_entrega_prevista} onChange={e => setForm({...form, data_entrega_prevista: e.target.value})} />
+          </FormField>
+          <FormField label="Valor Total (R$)">
+            <input type="number" style={{...inputStyle, fontWeight:700}} value={form.valor_total} onChange={e => setForm({...form, valor_total: e.target.value})} min="0" step="0.01" />
+          </FormField>
+          <FormField label="Descrição">
+            <textarea style={{...inputStyle, minHeight:80, resize:"vertical"}} value={form.descricao} onChange={e => setForm({...form, descricao: e.target.value})} />
+          </FormField>
+          <FormField label="Observações Internas">
+            <textarea style={{...inputStyle, minHeight:60, resize:"vertical", background:"#FFFBEB"}} value={form.observacoes_internas} onChange={e => setForm({...form, observacoes_internas: e.target.value})} />
+          </FormField>
+        </div>
+        <div>
+          <FormField label="Serviço Base">
+            <select style={sel} value={form.servico_id} onChange={e => setForm({...form, servico_id: e.target.value})}>
+              <option value="">Selecione o serviço...</option>
+              {refs.servicos.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+            </select>
+          </FormField>
+          <div style={{ background: "#F5F3FF", borderRadius: 10, padding: 16, marginTop: 8 }}>
+            <p style={{ margin: 0, fontSize: 13, color: "#7C3AED", fontWeight: 600 }}>
+              OS #{os.numero_os} · Lançada em {fmtDate(os.data_lancamento)}
+            </p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>
+              Para editar etapas e itens, use a visualização detalhada.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: 20, marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        <button type="button" onClick={onClose} style={{...btnSecondary}}>Cancelar</button>
+        <button type="submit" disabled={loading} style={{...btnPrimary}}>
+          {loading ? "Salvando..." : "Salvar Alterações"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ─── OS DETALHE ───────────────────────────────────────────────
 export function OSDetalhe({ os, onClose }) {
   const { usuario } = useAuth();
@@ -361,6 +506,7 @@ export function OrdensServico() {
   const [filtros, setFiltros] = useState({ status: "", prioridade: "", busca: "" });
   const [showModal, setShowModal] = useState(false);
   const [selectedOS, setSelectedOS] = useState(null);
+  const [editOS, setEditOS] = useState(null);
 
   useEffect(() => { loadOrdens(); }, []);
 
@@ -446,7 +592,13 @@ export function OrdensServico() {
                 : filtradas.length === 0
                 ? <tr><td colSpan={10} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS encontrada</td></tr>
                 : filtradas.map((os, i) => (
-                  <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+                  <tr
+                    key={os.id}
+                    onClick={() => setSelectedOS(os)}
+                    style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer", transition: "background 0.1s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
+                    onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
+                  >
                     <td style={{ padding: "12px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                     <td style={{ padding: "12px 14px", color: "#6B7280", whiteSpace: "nowrap" }}>{fmtDate(os.data_lancamento)}</td>
                     <td style={{ padding: "12px 14px" }}>{os.clientes?.nome || "—"}</td>
@@ -463,10 +615,23 @@ export function OrdensServico() {
                     </td>
                     <td style={{ padding: "12px 14px", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(os.valor_total)}</td>
                     <td style={{ padding: "12px 14px", color: "#6B7280", whiteSpace: "nowrap" }}>{os.usuarios?.funcionarios?.nome || "—"}</td>
-                    <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => setSelectedOS(os)} style={{ ...btnSecondary, padding: "5px 8px", fontSize: 11 }}><Eye size={12} /></button>
-                        <select value={os.status} onChange={e => updateStatus(os, e.target.value)} style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #D1D5DB", borderRadius: 6, cursor: "pointer", background: "#fff" }}>
+                    <td style={{ padding: "12px 14px", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                        <button
+                          title="Visualizar detalhes"
+                          onClick={e => { e.stopPropagation(); setSelectedOS(os); }}
+                          style={{ background: "#F5F3FF", color: "#7C3AED", border: "1px solid #DDD6FE", padding: "5px 8px", borderRadius: 7, cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                        ><Eye size={12} /></button>
+                        <button
+                          title="Editar OS"
+                          onClick={e => { e.stopPropagation(); setEditOS(os); }}
+                          style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #86EFAC", padding: "5px 8px", borderRadius: 7, cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                        ><Edit2 size={12} /></button>
+                        <select
+                          value={os.status}
+                          onChange={e => { e.stopPropagation(); updateStatus(os, e.target.value); }}
+                          style={{ fontSize: 11, padding: "4px 6px", border: "1px solid #D1D5DB", borderRadius: 6, cursor: "pointer", background: "#fff", maxWidth: 130 }}
+                        >
                           {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
                       </div>
@@ -485,6 +650,11 @@ export function OrdensServico() {
       {selectedOS && (
         <Modal title={`O.S. #${selectedOS.numero_os} — ${selectedOS.titulo}`} onClose={() => setSelectedOS(null)} size="lg">
           <OSDetalhe os={selectedOS} onClose={() => { setSelectedOS(null); loadOrdens(); }} />
+        </Modal>
+      )}
+      {editOS && (
+        <Modal title={`Editar O.S. #${editOS.numero_os} — ${editOS.titulo}`} onClose={() => setEditOS(null)} size="xl">
+          <EditarOS os={editOS} onSaved={() => { setEditOS(null); loadOrdens(); }} onClose={() => setEditOS(null)} />
         </Modal>
       )}
     </div>

@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabase";
 import { StatusBadge } from "../components/components";
 import { fmt, fmtDate, STATUS_CONFIG, isAtrasada } from "../constants/constants";
 import { BarChart3, FileText, DollarSign, Users, Calendar, Filter } from "lucide-react";
+import { OSDetalhe } from "./OrdensServico";
+import { Modal } from "../components/components";
 
 const inputStyle = {
   padding: "8px 12px", border: "1px solid #D1D5DB", borderRadius: 8,
@@ -32,6 +34,8 @@ export default function Relatorios() {
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [abaAtiva, setAbaAtiva] = useState("status");
+  const [filtroModal, setFiltroModal] = useState(null);
+  const [osDetalhe, setOsDetalhe] = useState(null);
   const [filtros, setFiltros] = useState({
     dataInicio: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
     dataFim: new Date().toISOString().split("T")[0],
@@ -93,10 +97,17 @@ export default function Relatorios() {
       <>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 24 }}>
           {grupos.map(({ key, cfg, count, valor }) => (
-            <div key={key} style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 12, padding: "16px 18px" }}>
+            <div
+              key={key}
+              onClick={() => count > 0 && setFiltroModal({ label: cfg.label, lista: ordens.filter(o => o.status === key) })}
+              style={{ background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 12, padding: "16px 18px", cursor: count > 0 ? "pointer" : "default", transition: "all 0.15s" }}
+              onMouseEnter={e => count > 0 && (e.currentTarget.style.transform = "translateY(-2px)", e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.1)")}
+              onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)", e.currentTarget.style.boxShadow = "none")}
+            >
               <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: cfg.text }}>{cfg.label}</p>
               <p style={{ margin: "6px 0 2px", fontSize: 26, fontWeight: 800, color: cfg.text }}>{count}</p>
               <p style={{ margin: 0, fontSize: 11, color: cfg.text, opacity: 0.8 }}>{fmt(valor)}</p>
+              {count > 0 && <p style={{ margin: "4px 0 0", fontSize: 10, color: cfg.text, opacity: 0.5 }}>clique para ver</p>}
             </div>
           ))}
         </div>
@@ -241,7 +252,13 @@ export default function Relatorios() {
           {ordens.length === 0
             ? <tr><td colSpan={10} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS no período.</td></tr>
             : ordens.map((os, i) => (
-              <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+              <tr
+                key={os.id}
+                onClick={() => setOsDetalhe(os)}
+                style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
+                onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
+              >
                 <td style={{ padding: "10px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
                 <td style={{ padding: "10px 14px", color: "#6B7280", whiteSpace: "nowrap" }}>{fmtDate(os.data_lancamento)}</td>
                 <td style={{ padding: "10px 14px" }}>{os.clientes?.nome || "—"}</td>
@@ -327,6 +344,57 @@ export default function Relatorios() {
       <SectionCard title={abas.find(a => a.key === abaAtiva)?.label || ""} icon={abas.find(a => a.key === abaAtiva)?.Icon}>
         {renderAba()}
       </SectionCard>
+      {/* Modal de filtro por status */}
+      {filtroModal && (
+        <div
+          onClick={e => e.target === e.currentTarget && setFiltroModal(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 700, maxHeight: "80vh", overflow: "auto", boxShadow: "0 32px 80px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F5F3FF", borderRadius: "20px 20px 0 0" }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#0F172A" }}>
+                {filtroModal.label} — {filtroModal.lista.length} OS
+              </div>
+              <button onClick={() => setFiltroModal(null)} style={{ border: "none", background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 18, color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+            <div style={{ padding: 16 }}>
+              {filtroModal.lista.length === 0
+                ? <p style={{ textAlign: "center", color: "#9CA3AF", padding: 40 }}>Nenhuma OS.</p>
+                : filtroModal.lista.map(os => {
+                    const cfg = STATUS_CONFIG[os.status] || STATUS_CONFIG.em_aberto;
+                    const atrasada = isAtrasada(os);
+                    return (
+                      <div
+                        key={os.id}
+                        onClick={() => { setFiltroModal(null); setOsDetalhe(os); }}
+                        style={{ border: `1px solid ${atrasada ? "#FCA5A5" : "#E5E7EB"}`, borderLeft: `4px solid ${atrasada ? "#EF4444" : cfg.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, cursor: "pointer", background: "#FAFAFA", transition: "background 0.12s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#FAFAFA"}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>OS #{os.numero_os}</span>
+                          <StatusBadge status={os.status} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#0F172A", marginBottom: 4 }}>{os.titulo}</div>
+                        <div style={{ fontSize: 12, color: "#6B7280" }}>
+                          {os.clientes?.nome} · {fmtDate(os.data_lancamento)}
+                          {atrasada && <span style={{ color: "#DC2626", fontWeight: 700 }}> ⚠ ATRASADA</span>}
+                        </div>
+                      </div>
+                    );
+                  })
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal detalhe da OS */}
+      {osDetalhe && (
+        <Modal title={`O.S. #${osDetalhe.numero_os} — ${osDetalhe.titulo}`} onClose={() => setOsDetalhe(null)} size="lg">
+          <OSDetalhe os={osDetalhe} onClose={() => setOsDetalhe(null)} />
+        </Modal>
+      )}
     </div>
   );
 }

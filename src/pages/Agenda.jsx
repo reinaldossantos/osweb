@@ -4,7 +4,7 @@ import { StatusBadge } from "../components/components";
 import { fmtDate, isAtrasada, STATUS_CONFIG, PRIORIDADE_CONFIG } from "../constants/constants";
 import {
   ChevronLeft, ChevronRight, CalendarDays, List,
-  Clock, AlertTriangle, CheckCircle2, Calendar,
+  Clock, AlertTriangle, AlertCircle, CheckCircle2, Calendar, PlayCircle,
 } from "lucide-react";
 
 // ─── HELPERS ─────────────────────────────────────────────────
@@ -376,6 +376,7 @@ export default function Agenda() {
   const [loading, setLoading] = useState(true);
   const [diaModal, setDiaModal] = useState(null); // { date, ordens }
   const [osDetalhe, setOsDetalhe] = useState(null);
+  const [filtroModal, setFiltroModal] = useState(null);
 
   useEffect(() => { loadOrdens(); }, [ano, mes]);
 
@@ -417,16 +418,22 @@ export default function Agenda() {
   const irParaHoje = () => { setMes(hoje.getMonth()); setAno(hoje.getFullYear()); };
 
   // Estatísticas rápidas do mês
-  const total    = ordens.length;
-  const atrasadas = ordens.filter(isAtrasada).length;
+  const total      = ordens.length;
+  const atrasadas  = ordens.filter(isAtrasada).length;
   const concluidas = ordens.filter(o => o.status === "concluida").length;
-  const pendentes  = ordens.filter(o => !["concluida","cancelada"].includes(o.status)).length;
+  const emAberto   = ordens.filter(o => o.status === "em_aberto").length;
+  const aguardAprov= ordens.filter(o => o.status === "aguardando_aprovacao").length;
+  const aprovadas  = ordens.filter(o => o.status === "aprovada").length;
+  const emProducao = ordens.filter(o => o.status === "em_producao").length;
 
   const statCards = [
-    { label: "Entregas no mês", value: total,     color: "#7C3AED", bg: "#F5F3FF", Icon: Calendar },
-    { label: "Pendentes",       value: pendentes,  color: "#D97706", bg: "#FEF3C7", Icon: Clock },
-    { label: "Em atraso",       value: atrasadas,  color: "#DC2626", bg: "#FEF2F2", Icon: AlertTriangle },
-    { label: "Concluídas",      value: concluidas, color: "#16A34A", bg: "#DCFCE7", Icon: CheckCircle2 },
+    { label: "Entregas no mês",    value: total,      color: "#7C3AED", bg: "#F5F3FF", Icon: Calendar,      filtro: null },
+    { label: "Em Aberto",          value: emAberto,   color: "#0369A1", bg: "#F0F9FF", Icon: Clock,          filtro: () => setFiltroModal({ label: "Em Aberto", ordens: ordens.filter(o => o.status === "em_aberto") }) },
+    { label: "Aguard. Aprovação",  value: aguardAprov,color: "#EA580C", bg: "#FFF7ED", Icon: AlertCircle,    filtro: () => setFiltroModal({ label: "Aguardando Aprovação", ordens: ordens.filter(o => o.status === "aguardando_aprovacao") }) },
+    { label: "Aprovadas",          value: aprovadas,  color: "#065F46", bg: "#ECFDF5", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Aprovadas", ordens: ordens.filter(o => o.status === "aprovada") }) },
+    { label: "Em Produção",        value: emProducao, color: "#6D28D9", bg: "#EDE9FE", Icon: PlayCircle,     filtro: () => setFiltroModal({ label: "Em Produção", ordens: ordens.filter(o => o.status === "em_producao") }) },
+    { label: "Em Atraso",          value: atrasadas,  color: "#DC2626", bg: "#FEF2F2", Icon: AlertTriangle,  filtro: () => setFiltroModal({ label: "Em Atraso", ordens: ordens.filter(isAtrasada) }) },
+    { label: "Concluídas",         value: concluidas, color: "#16A34A", bg: "#DCFCE7", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Concluídas", ordens: ordens.filter(o => o.status === "concluida") }) },
   ];
 
   return (
@@ -462,14 +469,21 @@ export default function Agenda() {
 
       {/* Cards de estatísticas */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 24 }}>
-        {statCards.map(({ label, value, color, bg, Icon }) => (
-          <div key={label} style={{ background: bg, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        {statCards.map(({ label, value, color, bg, Icon, filtro }) => (
+          <div
+            key={label}
+            onClick={filtro || undefined}
+            style={{ background: bg, borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: filtro ? "pointer" : "default", transition: "all 0.15s" }}
+            onMouseEnter={e => filtro && (e.currentTarget.style.transform = "translateY(-2px)", e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.1)")}
+            onMouseLeave={e => filtro && (e.currentTarget.style.transform = "translateY(0)", e.currentTarget.style.boxShadow = "none")}
+          >
             <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 10, padding: 8 }}>
               <Icon size={18} color={color} />
             </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
               <div style={{ fontSize: 11, color, opacity: 0.75, marginTop: 2, fontWeight: 500 }}>{label}</div>
+              {filtro && <div style={{ fontSize: 10, color, opacity: 0.5, marginTop: 1 }}>clique p/ ver</div>}
             </div>
           </div>
         ))}
@@ -520,6 +534,51 @@ export default function Agenda() {
           )}
         </div>
       </div>
+
+      {/* Modal: filtro por status dos cards */}
+      {filtroModal && (
+        <div
+          onClick={e => e.target === e.currentTarget && setFiltroModal(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 700, maxHeight: "80vh", overflow: "auto", boxShadow: "0 32px 80px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F5F3FF", borderRadius: "20px 20px 0 0" }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#0F172A" }}>
+                {filtroModal.label} — {filtroModal.ordens.length} {filtroModal.ordens.length === 1 ? "OS" : "OS"}
+              </div>
+              <button onClick={() => setFiltroModal(null)} style={{ border: "none", background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 18, color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+            <div style={{ padding: 16 }}>
+              {filtroModal.ordens.length === 0
+                ? <p style={{ textAlign: "center", color: "#9CA3AF", padding: 40 }}>Nenhuma OS nesta categoria.</p>
+                : filtroModal.ordens.map(os => {
+                    const cfg = STATUS_CONFIG[os.status] || STATUS_CONFIG.em_aberto;
+                    const atrasada = isAtrasada(os);
+                    return (
+                      <div
+                        key={os.id}
+                        onClick={() => { setFiltroModal(null); setOsDetalhe(os); }}
+                        style={{ border: `1px solid ${atrasada ? "#FCA5A5" : "#E5E7EB"}`, borderLeft: `4px solid ${atrasada ? "#EF4444" : cfg.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, cursor: "pointer", background: "#FAFAFA", transition: "all 0.12s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#FAFAFA"}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>OS #{os.numero_os}</span>
+                          <StatusBadge status={os.status} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#0F172A", marginBottom: 4 }}>{os.titulo}</div>
+                        <div style={{ fontSize: 12, color: "#6B7280" }}>
+                          {os.clientes?.nome} · Entrega: {fmtDate(os.data_entrega_prevista)}
+                          {atrasada && <span style={{ color: "#DC2626", fontWeight: 700 }}> ⚠ ATRASADA</span>}
+                        </div>
+                      </div>
+                    );
+                  })
+              }
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: OS do dia (modo calendário) */}
       {diaModal && (

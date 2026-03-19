@@ -47,7 +47,7 @@ src/
 └── pages/
     ├── LoginPage.jsx            ← Tela de login
     ├── Dashboard.jsx            ← Painel principal interativo
-    ├── OrdensServico.jsx        ← OS: lista, nova, detalhe, histórico
+    ├── OrdensServico.jsx        ← OS: lista, nova, edição, detalhe, histórico
     ├── CrudPages.jsx            ← Clientes, Funcionários, Cargos...
     ├── Agenda.jsx               ← Agenda de entregas (calendário)
     └── Relatorios.jsx           ← Módulo de relatórios
@@ -113,9 +113,12 @@ Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Concluída
 - **Captura automática** de data/hora de lançamento e usuário responsável
 - **Coluna "Lançado por"** na listagem e no detalhe
 - **4 prioridades**: Baixa, Normal, Alta, Urgente
-- Troca de status diretamente na lista (select inline) ou no detalhe
-- Data de entrega prevista com alertas visuais de atraso e entrega no dia
-- **Etapas âncora**: seleção das etapas no lançamento com checklist interativo
+- **Linha clicável** — clicar em qualquer linha abre o detalhe completo da OS
+- **Botão 👁 Visualizar** — abre o detalhe completo com histórico e etapas
+- **Botão ✏️ Editar** — abre formulário de edição da OS (título, cliente, tipo, status, prioridade, datas, valor, descrição)
+- **Select de status inline** — muda o status diretamente na lista sem abrir a OS
+- Data de entrega com alertas visuais de atraso e entrega no dia
+- **Etapas âncora**: seleção no lançamento com checklist interativo no detalhe
 - **Itens da OS** com cálculo automático de subtotal e total
 - Campo de observações internas
 - Filtros por status, prioridade e busca textual
@@ -125,6 +128,7 @@ Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Concluída
 ### 📝 Histórico de Alterações
 - Registro automático de **todas as alterações de status**
 - Registra o **nome do usuário** (admin ou básico) que realizou a alteração
+- Registra também edições gerais da OS
 - Exibe **status anterior → novo status** com badges coloridos
 - Data e hora precisas de cada evento
 - Funciona para todos os perfis de usuário
@@ -135,6 +139,19 @@ Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Concluída
 ### 📅 Agenda de Entregas
 
 Módulo de calendário para acompanhar as datas de entrega das OS.
+
+#### Cards de Estatísticas do Mês (clicáveis)
+Cada card abre modal com as OS filtradas por aquele status:
+
+| Card | Filtra por |
+|---|---|
+| Entregas no mês | Todas as OS do mês |
+| Em Aberto | Status "Em Aberto" |
+| Aguard. Aprovação | Status "Aguardando Aprovação" |
+| Aprovadas | Status "Aprovada" |
+| Em Produção | Status "Em Produção" |
+| Em Atraso | OS com prazo vencido |
+| Concluídas | Status "Concluída" |
 
 #### Modo Sintético (Calendário Mensal)
 - Grid 7×6 com todos os dias do mês
@@ -152,11 +169,6 @@ Módulo de calendário para acompanhar as datas de entrega das OS.
 - Efeito de deslize ao passar o mouse
 - Dias passados em tom acinzentado, hoje em lilás destacado
 - Clicar na OS abre detalhe completo
-
-#### Estatísticas do Mês
-- Total de entregas, Pendentes, Em atraso, Concluídas
-- Navegação de mês com botão "Hoje"
-- OS canceladas ocultadas automaticamente
 
 ---
 
@@ -176,8 +188,7 @@ Módulo de calendário para acompanhar as datas de entrega das OS.
 - Botão **"Ver etapas"** para visualizar etapas cadastradas por serviço
 
 ### 🔧 Etapas de Serviço
-- Etapas vinculadas a cada serviço
-- Ordem de execução e duração estimada em horas
+- Etapas vinculadas a cada serviço com ordem e duração estimada
 - Ancoradas no lançamento da OS
 - Checklist interativo no detalhe (marcar como concluída)
 
@@ -197,17 +208,17 @@ Módulo de calendário para acompanhar as datas de entrega das OS.
 
 ### 📈 Relatórios
 
-Módulo com filtro por período (data início → data fim) e **5 abas**:
+Módulo com filtro por período e **5 abas**:
 
 | Aba | Conteúdo |
 |---|---|
-| **Por Status** | Contagem e valor por status + alerta de atrasadas |
+| **Por Status** | Cards clicáveis por status + lista filtrada ao clicar |
 | **Por Cliente** | Ranking de clientes com barras de percentual |
 | **Por Tipo OS** | Quantidade, % do total, valor e ticket médio por tipo |
-| **Financeiro** | Faturamento total, concluído, em aberto, cancelado, ticket médio + Top 10 OS por valor |
-| **Lista Completa** | Todas as OS do período com colunas: Nº, Data, Cliente, Título, Tipo, Status, Entrega, Lançado por, **Finalizado por**, Valor |
+| **Financeiro** | Faturamento total, concluído, em aberto, cancelado, ticket médio + Top 10 por valor |
+| **Lista Completa** | Linhas clicáveis — abre detalhe da OS. Colunas: Nº, Data, Cliente, Título, Tipo, Status, Entrega, Lançado por, **Finalizado por**, Valor |
 
-> **Coluna "Finalizado por"**: exibe o nome do usuário que concluiu a OS. Se não foi finalizada, exibe `—`.
+> **"Finalizado por"**: nome do usuário que concluiu a OS. Se não finalizada, exibe `—`.
 
 ---
 
@@ -274,7 +285,6 @@ VITE_SUPABASE_ANON_KEY=sua_anon_key_aqui
 No **Supabase → Authentication → Users**, crie um usuário com email e senha. Depois execute no **SQL Editor**:
 
 ```sql
--- Substitua pelo seu nome e email
 INSERT INTO funcionarios (nome, email)
 VALUES ('Administrador', 'admin@suaempresa.com.br');
 
@@ -286,12 +296,12 @@ VALUES (
 );
 ```
 
-### 6. Confirmação de email (recomendado para testes)
+### 6. Confirmação de email (testes)
 
 No **Supabase → Authentication → Settings → Email Auth**:
-- Desmarque **"Enable email confirmations"** para que novos usuários possam logar sem confirmar email
+- Desmarque **"Enable email confirmations"**
 
-### 7. Executar o sistema
+### 7. Executar
 
 ```bash
 npm run dev
@@ -303,8 +313,6 @@ Acesse em `http://localhost:5173`
 
 ## 📄 Arquivos SQL — Ordem de Execução
 
-Execute todos no **Supabase → SQL Editor** na sequência abaixo:
-
 | Ordem | Arquivo | Descrição |
 |---|---|---|
 | 1 | `supabase_schema.sql` | Cria todas as tabelas, triggers, RLS e dados de seed |
@@ -312,7 +320,7 @@ Execute todos no **Supabase → SQL Editor** na sequência abaixo:
 | 3 | `migracao_status.sql` | Renomeia `aguardando` → `em_aberto` e adiciona `aprovada` |
 | 4 | `seed_corrigido.sql` | Opcional — recarrega dados de seed |
 
-> ⚠️ **Atenção**: o arquivo `migracao_status.sql` é obrigatório para quem já tinha o sistema instalado anteriormente. Ele converte as OS existentes com status `aguardando` para `em_aberto` e atualiza a constraint do banco de dados.
+> ⚠️ O `migracao_status.sql` é **obrigatório** para quem já tinha o sistema instalado.
 
 ---
 
@@ -326,25 +334,24 @@ Execute todos no **Supabase → SQL Editor** na sequência abaixo:
 
 ## 📈 Sugestões de Evolução Futura
 
-1. **Exportar relatórios em PDF/Excel** — Relatórios prontos para impressão ou envio
-2. **Notificações por email** — Alertas de prazo e mudança de status via Supabase Edge Functions
-3. **Anexar arquivos à OS** — Artes, fotos de medição, imagem do produto finalizado
-4. **Portal do cliente** — Acompanhamento de OS pelo cliente via link único
-5. **App mobile nativo** — React Native com mesmo backend Supabase
-6. **Assinatura digital de arte** — Aprovação de arte pelo cliente no próprio sistema
-7. **Integração com WhatsApp** — Notificações automáticas de status via API
-8. **Módulo financeiro** — Contas a receber vinculadas às OS com controle de pagamentos
-9. **Galeria de fotos por OS** — Registro fotográfico do serviço (antes/durante/depois)
-10. **Dashboard por funcionário** — Produtividade e OS por colaborador por período
-11. **Notificações in-app** — Sino de alertas para OS atrasadas ou pendentes de aprovação
-12. **Etiqueta/QR Code da OS** — Impressão de etiqueta com QR Code para rastreamento físico
+1. Exportar relatórios em PDF/Excel
+2. Notificações por email via Supabase Edge Functions
+3. Anexar arquivos à OS (artes, fotos)
+4. Portal do cliente — acompanhamento via link único
+5. App mobile nativo com React Native
+6. Assinatura digital de arte pelo cliente
+7. Integração com WhatsApp para notificações automáticas
+8. Módulo financeiro com contas a receber
+9. Galeria de fotos por OS (antes/durante/depois)
+10. Dashboard por funcionário — produtividade por período
+11. Notificações in-app para OS atrasadas ou pendentes
+12. Etiqueta/QR Code da OS para rastreamento físico
 
 ---
 
-## 🆘 Suporte e Documentação
+## 🆘 Suporte
 
 - [Documentação Supabase](https://supabase.com/docs)
 - [React Documentação](https://react.dev)
 - [Lucide Icons](https://lucide.dev)
-- [Plus Jakarta Sans — Google Fonts](https://fonts.google.com/specimen/Plus+Jakarta+Sans)
-- [Supabase Community Discord](https://discord.supabase.com)
+- [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans)
