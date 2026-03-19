@@ -1,15 +1,16 @@
 import {
   LayoutDashboard, FileText, Plus, Users, Briefcase,
   CreditCard, Tag, UserPlus, Package, Layers, Building2,
-  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3,
+  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays,
 } from "lucide-react";
 
 export const STATUS_CONFIG = {
-  aguardando:           { label: "Aguardando",       Icon: Clock,        bg: "#FEF9C3", text: "#854D0E", border: "#FDE047" },
-  em_producao:          { label: "Em Produção",       Icon: PlayCircle,   bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" },
-  aguardando_aprovacao: { label: "Aguard. Aprovação", Icon: AlertCircle,  bg: "#FED7AA", text: "#9A3412", border: "#FB923C" },
-  concluida:            { label: "Concluída",         Icon: CheckCircle2, bg: "#DCFCE7", text: "#166534", border: "#86EFAC" },
-  cancelada:            { label: "Cancelada",         Icon: XCircle,      bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
+  em_aberto:            { label: "Em Aberto",          Icon: Clock,        bg: "#F0F9FF", text: "#0369A1", border: "#7DD3FC" },
+  aguardando_aprovacao: { label: "Aguard. Aprovação",   Icon: AlertCircle,  bg: "#FED7AA", text: "#9A3412", border: "#FB923C" },
+  aprovada:             { label: "Aprovada",            Icon: CheckCircle2, bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" },
+  em_producao:          { label: "Em Produção",         Icon: PlayCircle,   bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" },
+  concluida:            { label: "Concluída",           Icon: CheckCircle2, bg: "#DCFCE7", text: "#166534", border: "#86EFAC" },
+  cancelada:            { label: "Cancelada",           Icon: XCircle,      bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
 };
 
 export const PRIORIDADE_CONFIG = {
@@ -33,6 +34,7 @@ export const NAV_ITEMS = [
   { key: "formas_pagamento", label: "Formas de Pagamento",  Icon: CreditCard },
   { key: "divider2" },
   { key: "usuarios",         label: "Usuários",             Icon: UserPlus,  adminOnly: true },
+  { key: "agenda",           label: "Agenda",               Icon: CalendarDays },
   { key: "relatorios",       label: "Relatórios",           Icon: BarChart3 },
 ];
 

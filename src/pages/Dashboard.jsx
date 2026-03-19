@@ -4,7 +4,7 @@ import { StatusBadge, PrioridadeBadge, Modal } from "../components/components";
 import { fmt, fmtDate, isAtrasada, isHoje, STATUS_CONFIG } from "../constants/constants";
 import { OSDetalhe } from "./OrdensServico";
 import {
-  FileText, PlayCircle, Clock, AlertTriangle, Calendar,
+  FileText, PlayCircle, Clock, AlertTriangle, AlertCircle, Calendar,
   TrendingUp, CheckCircle2, XCircle, DollarSign, BarChart3,
   RefreshCw,
 } from "lucide-react";
@@ -91,7 +91,7 @@ export default function Dashboard() {
 
     setStats({
       total:                lista.length,
-      aguardando:           lista.filter(o => o.status === "aguardando").length,
+      em_aberto:            lista.filter(o => o.status === "em_aberto").length,
       em_producao:          lista.filter(o => o.status === "em_producao").length,
       aguardando_aprovacao: lista.filter(o => o.status === "aguardando_aprovacao").length,
       concluida:            lista.filter(o => o.status === "concluida").length,
@@ -118,35 +118,43 @@ export default function Dashboard() {
 
   const cards = [
     {
-      label: "Total de OS",   value: stats.total,       Icon: FileText,      color: "#7C3AED", bg: "#F5F3FF",
+      label: "Total de OS",        value: stats.total,                Icon: FileText,      color: "#7C3AED", bg: "#F5F3FF",
       filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true),
     },
     {
-      label: "Em Produção",   value: stats.em_producao, Icon: PlayCircle,    color: "#8B5CF6", bg: "#EDE9FE",
+      label: "Em Aberto",          value: stats.em_aberto,            Icon: Clock,         color: "#0369A1", bg: "#F0F9FF",
+      filtro: () => abrirFiltro("OS Em Aberto", o => o.status === "em_aberto"),
+    },
+    {
+      label: "Aguard. Aprovação",  value: stats.aguardando_aprovacao, Icon: AlertCircle,   color: "#EA580C", bg: "#FFF7ED",
+      filtro: () => abrirFiltro("OS Aguardando Aprovação", o => o.status === "aguardando_aprovacao"),
+    },
+    {
+      label: "Aprovada",           value: stats.aprovada,             Icon: CheckCircle2,  color: "#065F46", bg: "#ECFDF5",
+      filtro: () => abrirFiltro("OS Aprovadas", o => o.status === "aprovada"),
+    },
+    {
+      label: "Em Produção",        value: stats.em_producao,          Icon: PlayCircle,    color: "#8B5CF6", bg: "#EDE9FE",
       filtro: () => abrirFiltro("OS Em Produção", o => o.status === "em_producao"),
     },
     {
-      label: "Aguardando",    value: stats.aguardando,  Icon: Clock,         color: "#D97706", bg: "#FEF3C7",
-      filtro: () => abrirFiltro("OS Aguardando", o => o.status === "aguardando"),
-    },
-    {
-      label: "Em Atraso",     value: stats.atrasadas,   Icon: AlertTriangle, color: "#DC2626", bg: "#FEF2F2",
+      label: "Em Atraso",          value: stats.atrasadas,            Icon: AlertTriangle, color: "#DC2626", bg: "#FEF2F2",
       filtro: () => abrirFiltro("OS Em Atraso", isAtrasada),
     },
     {
-      label: "Para Hoje",     value: stats.hoje,        Icon: Calendar,      color: "#7C3AED", bg: "#F5F3FF",
+      label: "Para Hoje",          value: stats.hoje,                 Icon: Calendar,      color: "#7C3AED", bg: "#F5F3FF",
       filtro: () => abrirFiltro("OS com Entrega Hoje", o => isHoje(o) && !["concluida","cancelada"].includes(o.status)),
     },
     {
-      label: "Lançadas Hoje", value: stats.lancadasHoje,Icon: TrendingUp,    color: "#059669", bg: "#ECFDF5",
+      label: "Lançadas Hoje",      value: stats.lancadasHoje,         Icon: TrendingUp,    color: "#059669", bg: "#ECFDF5",
       filtro: () => abrirFiltro("OS Lançadas Hoje", o => o.data_lancamento?.startsWith(hoje)),
     },
     {
-      label: "Concluídas",    value: stats.concluida,   Icon: CheckCircle2,  color: "#16A34A", bg: "#DCFCE7",
+      label: "Concluídas",         value: stats.concluida,            Icon: CheckCircle2,  color: "#16A34A", bg: "#DCFCE7",
       filtro: () => abrirFiltro("OS Concluídas", o => o.status === "concluida"),
     },
     {
-      label: "Canceladas",    value: stats.cancelada,   Icon: XCircle,       color: "#9CA3AF", bg: "#F3F4F6",
+      label: "Canceladas",         value: stats.cancelada,            Icon: XCircle,       color: "#9CA3AF", bg: "#F3F4F6",
       filtro: () => abrirFiltro("OS Canceladas", o => o.status === "cancelada"),
     },
   ];

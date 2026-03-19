@@ -41,13 +41,37 @@ export default function Relatorios() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("ordens_servico")
-      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome))")
-      .gte("data_lancamento", filtros.dataInicio + "T00:00:00")
-      .lte("data_lancamento", filtros.dataFim + "T23:59:59")
-      .order("data_lancamento", { ascending: false });
-    setOrdens(data || []);
+
+    const [{ data: osData }, { data: histData }] = await Promise.all([
+      supabase
+        .from("ordens_servico")
+        .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome))")
+        .gte("data_lancamento", filtros.dataInicio + "T00:00:00")
+        .lte("data_lancamento", filtros.dataFim + "T23:59:59")
+        .order("data_lancamento", { ascending: false }),
+      // Busca todos os registros de conclusão do período
+      supabase
+        .from("os_historico")
+        .select("os_id, usuarios(funcionarios(nome)), created_at")
+        .eq("valor_novo", "concluida")
+        .order("created_at", { ascending: false }),
+    ]);
+
+    // Mapeia: os_id → nome do usuário que finalizou (primeiro registro encontrado)
+    const finalizadoPorMap = {};
+    (histData || []).forEach(h => {
+      if (!finalizadoPorMap[h.os_id]) {
+        finalizadoPorMap[h.os_id] = h.usuarios?.funcionarios?.nome || "—";
+      }
+    });
+
+    // Injeta "finalizado_por" em cada OS
+    const ordens = (osData || []).map(os => ({
+      ...os,
+      finalizado_por: os.status === "concluida" ? (finalizadoPorMap[os.id] || "—") : "—",
+    }));
+
+    setOrdens(ordens);
     setLoading(false);
   };
 
@@ -208,14 +232,14 @@ export default function Relatorios() {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
-            {["Nº", "Data", "Cliente", "Título", "Tipo", "Status", "Entrega", "Lançado por", "Valor"].map(h => (
+            {["Nº", "Data", "Cliente", "Título", "Tipo", "Status", "Entrega", "Lançado por", "Finalizado por", "Valor"].map(h => (
               <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#6B7280", fontSize: 12, whiteSpace: "nowrap" }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {ordens.length === 0
-            ? <tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS no período.</td></tr>
+            ? <tr><td colSpan={10} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS no período.</td></tr>
             : ordens.map((os, i) => (
               <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
                 <td style={{ padding: "10px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
@@ -231,6 +255,9 @@ export default function Relatorios() {
                   {isAtrasada(os) && <span style={{ display: "block", fontSize: 10 }}>⚠ ATRASADA</span>}
                 </td>
                 <td style={{ padding: "10px 14px", color: "#6B7280" }}>{os.usuarios?.funcionarios?.nome || "—"}</td>
+                <td style={{ padding: "10px 14px", color: os.finalizado_por !== "—" ? "#16A34A" : "#9CA3AF", fontWeight: os.finalizado_por !== "—" ? 600 : 400 }}>
+                  {os.finalizado_por}
+                </td>
                 <td style={{ padding: "10px 14px", fontWeight: 600 }}>{fmt(os.valor_total)}</td>
               </tr>
             ))}

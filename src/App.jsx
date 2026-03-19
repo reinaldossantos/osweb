@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import { OrdensServico, NovaOS } from "./pages/OrdensServico";
 import Relatorios from "./pages/Relatorios";
+import Agenda from "./pages/Agenda";
 import {
   PageClientes, PageFuncionarios, PageCargos, PageServicos,
   PageEtapas, PageTiposOS, PageFormasPagto, PageUsuarios,
@@ -143,6 +144,7 @@ function AppContent() {
       case "formas_pagamento": return <PageFormasPagto />;
       case "usuarios":         return isAdmin ? <PageUsuarios /> : <p style={{ color: "#EF4444" }}>Acesso restrito.</p>;
       case "relatorios":       return <Relatorios />;
+      case "agenda":          return <Agenda />;
       default:                 return <Dashboard />;
     }
   };
