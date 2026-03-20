@@ -706,9 +706,30 @@ export function OrdensServico() {
         <span style={{ fontSize: 13, color: "#6B7280" }}>{filtradas.length} registros</span>
       </div>
 
-      {/* Tabela */}
+      {/* Tabela — drag to scroll */}
       <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
+        <div
+          ref={el => {
+            if (!el) return;
+            let isDown = false, startX, startY, scrollLeft, scrollTop;
+            el.onmousedown = e => {
+              // só ativa em cliques na área de scroll (não em botões/selects)
+              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" || e.target.closest("button") || e.target.closest("select")) return;
+              isDown = true; el.style.cursor = "grabbing";
+              startX = e.pageX - el.offsetLeft; startY = e.pageY - el.offsetTop;
+              scrollLeft = el.scrollLeft; scrollTop = el.scrollTop;
+            };
+            el.onmouseleave = () => { isDown = false; el.style.cursor = "default"; };
+            el.onmouseup   = () => { isDown = false; el.style.cursor = "default"; };
+            el.onmousemove = e => {
+              if (!isDown) return;
+              e.preventDefault();
+              el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
+              el.scrollTop  = scrollTop  - (e.pageY - el.offsetTop  - startY);
+            };
+          }}
+          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "65vh", cursor: "default" }}
+        >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>

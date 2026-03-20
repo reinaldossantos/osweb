@@ -6,7 +6,7 @@ import { OSDetalhe } from "./OrdensServico";
 import {
   FileText, PlayCircle, Clock, AlertTriangle, AlertCircle, Calendar,
   TrendingUp, CheckCircle2, XCircle, DollarSign, BarChart3,
-  RefreshCw,
+  RefreshCw, Wrench,
 } from "lucide-react";
 
 // ─── MODAL: LISTA DE OS POR FILTRO ───────────────────────────
@@ -118,53 +118,79 @@ export default function Dashboard() {
 
   const cards = [
     {
-      label: "Total de OS",        value: stats.total,                Icon: FileText,      color: "#7C3AED", bg: "#F5F3FF",
+      label: "Total de OS",        value: stats.total,
+      color: "#fff", bg: "#7C3AED", icon: "#fff",
       filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true),
+      Icon: FileText, effect: null,
     },
     {
-      label: "Em Aberto",          value: stats.em_aberto,            Icon: Clock,         color: "#0369A1", bg: "#F0F9FF",
+      label: "Em Aberto",          value: stats.em_aberto,
+      color: "#fff", bg: "#0EA5E9", icon: "#fff",
       filtro: () => abrirFiltro("OS Em Aberto", o => o.status === "em_aberto"),
+      Icon: Clock, effect: "pulse-blue",
     },
     {
-      label: "Aguard. Aprovação",  value: stats.aguardando_aprovacao, Icon: AlertCircle,   color: "#EA580C", bg: "#FFF7ED",
+      label: "Aguard. Aprovação",  value: stats.aguardando_aprovacao,
+      color: "#fff", bg: "#F97316", icon: "#fff",
       filtro: () => abrirFiltro("OS Aguardando Aprovação", o => o.status === "aguardando_aprovacao"),
+      Icon: AlertCircle, effect: "pulse-orange",
     },
     {
-      label: "Aprovada",           value: stats.aprovada,             Icon: CheckCircle2,  color: "#065F46", bg: "#ECFDF5",
+      label: "Aprovada",           value: stats.aprovada,
+      color: "#fff", bg: "#10B981", icon: "#fff",
       filtro: () => abrirFiltro("OS Aprovadas", o => o.status === "aprovada"),
+      Icon: CheckCircle2, effect: null,
     },
     {
-      label: "Em Produção",        value: stats.em_producao,          Icon: PlayCircle,    color: "#8B5CF6", bg: "#EDE9FE",
+      label: "Em Produção",        value: stats.em_producao,
+      color: "#fff", bg: "#8B5CF6", icon: "#fff",
       filtro: () => abrirFiltro("OS Em Produção", o => o.status === "em_producao"),
+      Icon: PlayCircle, effect: null,
     },
     {
-      label: "Em Atraso",          value: stats.atrasadas,            Icon: AlertTriangle, color: "#DC2626", bg: "#FEF2F2",
+      label: "Em Instalação",      value: stats.em_instalacao,
+      color: "#fff", bg: "#F59E0B", icon: "#fff",
+      filtro: () => abrirFiltro("OS Em Instalação", o => o.status === "em_instalacao"),
+      Icon: Wrench, effect: null,
+    },
+    {
+      label: "Em Atraso",          value: stats.atrasadas,
+      color: "#fff", bg: "#EF4444", icon: "#fff",
       filtro: () => abrirFiltro("OS Em Atraso", isAtrasada),
+      Icon: AlertTriangle, effect: "blink-red",
     },
     {
-      label: "Para Hoje",          value: stats.hoje,                 Icon: Calendar,      color: "#7C3AED", bg: "#F5F3FF",
+      label: "Para Hoje",          value: stats.hoje,
+      color: "#fff", bg: "#7C3AED", icon: "#fff",
       filtro: () => abrirFiltro("OS com Entrega Hoje", o => isHoje(o) && !["concluida","cancelada"].includes(o.status)),
+      Icon: Calendar, effect: "pulse-violet",
     },
     {
-      label: "Lançadas Hoje",      value: stats.lancadasHoje,         Icon: TrendingUp,    color: "#059669", bg: "#ECFDF5",
+      label: "Lançadas Hoje",      value: stats.lancadasHoje,
+      color: "#fff", bg: "#059669", icon: "#fff",
       filtro: () => abrirFiltro("OS Lançadas Hoje", o => o.data_lancamento?.startsWith(hoje)),
+      Icon: TrendingUp, effect: null,
     },
     {
-      label: "Concluídas",         value: stats.concluida,            Icon: CheckCircle2,  color: "#16A34A", bg: "#DCFCE7",
+      label: "Concluídas",         value: stats.concluida,
+      color: "#fff", bg: "#16A34A", icon: "#fff",
       filtro: () => abrirFiltro("OS Concluídas", o => o.status === "concluida"),
+      Icon: CheckCircle2, effect: null,
     },
     {
-      label: "Canceladas",         value: stats.cancelada,            Icon: XCircle,       color: "#9CA3AF", bg: "#F3F4F6",
+      label: "Canceladas",         value: stats.cancelada,
+      color: "#9CA3AF", bg: "#F3F4F6", icon: "#9CA3AF",
       filtro: () => abrirFiltro("OS Canceladas", o => o.status === "cancelada"),
+      Icon: XCircle, effect: null,
     },
   ];
 
   const valorCards = [
-    { label: "Valor Total Geral", value: fmt(stats.valorTotal),      Icon: DollarSign, color: "#7C3AED",
+    { label: "Valor Total Geral", value: fmt(stats.valorTotal),      Icon: DollarSign, bg: "#7C3AED",
       filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true) },
-    { label: "Valor em Aberto",   value: fmt(stats.valorAbertas),    Icon: BarChart3,  color: "#D97706",
+    { label: "Valor em Aberto",   value: fmt(stats.valorAbertas),    Icon: BarChart3,  bg: "#F97316",
       filtro: () => abrirFiltro("OS em Aberto", o => !["concluida","cancelada"].includes(o.status)) },
-    { label: "Valor Concluído",   value: fmt(stats.valorConcluidas), Icon: TrendingUp, color: "#16A34A",
+    { label: "Valor Concluído",   value: fmt(stats.valorConcluidas), Icon: TrendingUp, bg: "#16A34A",
       filtro: () => abrirFiltro("OS Concluídas", o => o.status === "concluida") },
   ];
 
@@ -183,46 +209,72 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Keyframes para efeitos de atenção */}
+      <style>{`
+        @keyframes pulse-scale {
+          0%,100% { transform: scale(1); }
+          50%      { transform: scale(1.04); box-shadow: 0 8px 28px rgba(0,0,0,0.22); }
+        }
+        @keyframes blink-red {
+          0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.3); }
+          50%      { box-shadow: 0 0 0 10px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.5); }
+        }
+        @keyframes glow-orange {
+          0%,100% { box-shadow: 0 2px 8px rgba(249,115,22,0.35); }
+          50%      { box-shadow: 0 4px 22px rgba(249,115,22,0.65); }
+        }
+        @keyframes glow-violet {
+          0%,100% { box-shadow: 0 2px 8px rgba(124,58,237,0.35); }
+          50%      { box-shadow: 0 4px 22px rgba(124,58,237,0.65); }
+        }
+        .dash-card { cursor: pointer; transition: transform 0.15s, filter 0.15s; }
+        .dash-card:hover { transform: translateY(-4px) !important; filter: brightness(1.1); animation-play-state: paused !important; }
+        .eff-pulse-blue   { animation: pulse-scale  2.5s ease-in-out infinite; }
+        .eff-blink-red    { animation: blink-red    1.3s ease-in-out infinite; }
+        .eff-pulse-orange { animation: glow-orange  2s ease-in-out infinite; }
+        .eff-pulse-violet { animation: glow-violet  2s ease-in-out infinite; }
+      `}</style>
+
       {/* Cards de contagem — clicáveis */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 24 }}>
-        {cards.map(({ label, value, Icon, color, bg, filtro }) => (
+        {cards.map(({ label, value, Icon, bg, icon, color, filtro, effect }) => (
           <div
             key={label}
             onClick={filtro}
-            style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", cursor: "pointer", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.10)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)"; e.currentTarget.style.transform = "translateY(0)"; }}
+            className={`dash-card${effect ? " eff-" + effect : ""}`}
+            style={{ background: bg, borderRadius: 16, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <p style={{ margin: 0, fontSize: 12, color: "#6B7280", fontWeight: 500 }}>{label}</p>
-                <p style={{ margin: "6px 0 0", fontSize: 28, fontWeight: 800, color }}>{value}</p>
+                <p style={{ margin: 0, fontSize: 11.5, color: color === "#fff" ? "rgba(255,255,255,0.8)" : "#6B7280", fontWeight: 600 }}>{label}</p>
+                <p style={{ margin: "8px 0 0", fontSize: 32, fontWeight: 900, color, lineHeight: 1 }}>{value}</p>
               </div>
-              <div style={{ background: bg, borderRadius: 10, padding: 8 }}>
-                <Icon size={18} color={color} />
+              <div style={{ background: "rgba(255,255,255,0.22)", borderRadius: 12, padding: 9, flexShrink: 0 }}>
+                <Icon size={20} color={icon} />
               </div>
             </div>
-            <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9CA3AF" }}>Clique para ver detalhes</p>
+            <p style={{ margin: "10px 0 0", fontSize: 10.5, color: color === "#fff" ? "rgba(255,255,255,0.6)" : "#9CA3AF" }}>▸ ver detalhes</p>
           </div>
         ))}
       </div>
 
       {/* Cards de valor — clicáveis */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14, marginBottom: 30 }}>
-        {valorCards.map(({ label, value, Icon, color, filtro }) => (
+        {valorCards.map(({ label, value, Icon, color, bg, filtro }) => (
           <div
             key={label}
             onClick={filtro}
-            style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", border: "1px solid #E5E7EB", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", cursor: "pointer", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.10)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.05)"; e.currentTarget.style.transform = "translateY(0)"; }}
+            className="dash-card"
+            style={{ background: bg || "#F5F3FF", borderRadius: 16, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.10)" }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <Icon size={18} color={color} />
-              <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 500 }}>{label}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ background: "rgba(255,255,255,0.3)", borderRadius: 10, padding: 7 }}>
+                <Icon size={18} color="#fff" />
+              </div>
+              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{label}</span>
             </div>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color }}>{value}</p>
-            <p style={{ margin: "6px 0 0", fontSize: 11, color: "#9CA3AF" }}>Clique para ver OS</p>
+            <p style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#fff" }}>{value}</p>
+            <p style={{ margin: "6px 0 0", fontSize: 10.5, color: "rgba(255,255,255,0.65)" }}>▸ ver OS</p>
           </div>
         ))}
       </div>

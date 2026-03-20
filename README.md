@@ -52,6 +52,8 @@ src/
 ### 📊 Dashboard
 - **10 cards clicáveis** — ao clicar abre modal com OS filtradas; clicar na OS abre detalhe
 - **3 cards financeiros** clicáveis (Total Geral, Em Aberto, Concluído)
+- Cards com **cores sólidas e preenchidas** para melhor visualização em TV/monitor grande
+- **Efeitos de atenção animados** nos cards: Em Aberto (pulso), Aguard. Aprovação (brilho laranja), Em Atraso (pisca vermelho), Para Hoje (brilho violeta)
 - Distribuição por Status com barras clicáveis
 - Últimas OS com linhas clicáveis para detalhe
 
@@ -63,8 +65,8 @@ src/
 
 #### Fluxo de Status
 ```
-Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Concluída
-                                                        ↘ Cancelada
+Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Em Instalação → Concluída
+                                                                           ↘ Cancelada
 ```
 
 | Status | Cor |
@@ -73,6 +75,7 @@ Em Aberto → Aguard. Aprovação → Aprovada → Em Produção → Concluída
 | 🟠 Aguard. Aprovação | Laranja — aguardando aprovação do cliente |
 | 🟢 Aprovada | Verde menta — aprovada, aguardando produção |
 | 🟣 Em Produção | Lilás — em execução |
+| 🔧 Em Instalação | Âmbar — em processo de instalação |
 | ✅ Concluída | Verde |
 | ❌ Cancelada | Vermelho |
 
@@ -221,7 +224,8 @@ npm run dev   # http://localhost:5173
 | 2 | `correcao_historico.sql` | Corrige histórico para registrar usuário |
 | 3 | `migracao_status.sql` | Renomeia `aguardando` → `em_aberto`, adiciona `aprovada` |
 | 4 | `migracao_novos_campos.sql` | Adiciona `cidade`, `numero_os_externo`, Cheque e Bonificação |
-| 5 | `seed_corrigido.sql` | Opcional — recarrega dados de seed |
+| 5 | `migracao_em_instalacao.sql` | Adiciona status `em_instalacao` |
+| 6 | `seed_corrigido.sql` | Opcional — recarrega dados de seed |
 
 > ⚠️ Os arquivos de migração (3 e 4) são **obrigatórios** para quem já tinha o sistema instalado.
 

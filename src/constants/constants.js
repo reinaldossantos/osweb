@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Plus, Users, Briefcase,
   CreditCard, Tag, UserPlus, Package, Layers, Building2,
-  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays,
+  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays, Wrench,
 } from "lucide-react";
 
 export const STATUS_CONFIG = {
@@ -9,6 +9,7 @@ export const STATUS_CONFIG = {
   aguardando_aprovacao: { label: "Aguard. Aprovação",   Icon: AlertCircle,  bg: "#FED7AA", text: "#9A3412", border: "#FB923C" },
   aprovada:             { label: "Aprovada",            Icon: CheckCircle2, bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" },
   em_producao:          { label: "Em Produção",         Icon: PlayCircle,   bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" },
+  em_instalacao:        { label: "Em Instalação",       Icon: Wrench,       bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
   concluida:            { label: "Concluída",           Icon: CheckCircle2, bg: "#DCFCE7", text: "#166534", border: "#86EFAC" },
   cancelada:            { label: "Cancelada",           Icon: XCircle,      bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
 };
