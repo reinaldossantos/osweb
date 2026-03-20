@@ -454,6 +454,93 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Gráficos de Volume por Status */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+
+        {/* Gráfico de barras horizontal — OS por Status */}
+        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "#111827" }}>Volume por Status</h3>
+          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+            const count = stats[key] || 0;
+            const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
+            return (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: cfg.text }}>{cfg.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>{count}</span>
+                </div>
+                <div style={{ height: 10, background: "#F3F4F6", borderRadius: 99, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: cfg.border, borderRadius: 99, transition: "width 0.8s ease", minWidth: count > 0 ? 4 : 0 }} />
+                </div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2 }}>{pct.toFixed(0)}% do total</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Gráfico de rosca — SVG puro */}
+        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
+          <h3 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "#111827" }}>Distribuição Visual</h3>
+          {(() => {
+            const statusComDados = Object.entries(STATUS_CONFIG)
+              .map(([key, cfg]) => ({ key, cfg, count: stats[key] || 0 }))
+              .filter(x => x.count > 0);
+            const total = statusComDados.reduce((s, x) => s + x.count, 0);
+
+            if (total === 0) return (
+              <div style={{ textAlign: "center", color: "#9CA3AF", padding: "40px 0" }}>
+                <p>Nenhuma OS cadastrada</p>
+              </div>
+            );
+
+            // Build SVG donut
+            const cx = 100, cy = 100, r = 70, innerR = 42;
+            const circumference = 2 * Math.PI * r;
+            let offset = 0;
+            const slices = statusComDados.map(({ key, cfg, count }) => {
+              const pct = count / total;
+              const dash = pct * circumference;
+              const slice = { key, cfg, count, dash, offset, pct };
+              offset += dash;
+              return slice;
+            });
+
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                <svg width={200} height={200} viewBox="0 0 200 200" style={{ flexShrink: 0 }}>
+                  {slices.map(({ key, cfg, dash, offset: off }) => (
+                    <circle
+                      key={key}
+                      cx={cx} cy={cy} r={r}
+                      fill="none"
+                      stroke={cfg.border}
+                      strokeWidth={28}
+                      strokeDasharray={`${dash} ${circumference - dash}`}
+                      strokeDashoffset={-off + circumference * 0.25}
+                      style={{ transition: "stroke-dasharray 0.6s ease" }}
+                    />
+                  ))}
+                  <circle cx={cx} cy={cy} r={innerR} fill="#fff" />
+                  <text x={cx} y={cy - 8} textAnchor="middle" fontSize={22} fontWeight={800} fill="#111827">{total}</text>
+                  <text x={cx} y={cy + 12} textAnchor="middle" fontSize={11} fill="#6B7280">OS total</text>
+                </svg>
+                <div style={{ flex: 1 }}>
+                  {slices.map(({ key, cfg, count, pct }) => (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}
+                      onClick={() => abrirFiltro(`OS — ${cfg.label}`, o => o.status === key)}>
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: cfg.border, flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, flex: 1, color: "#374151" }}>{cfg.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: cfg.text }}>{count}</span>
+                      <span style={{ fontSize: 11, color: "#9CA3AF", minWidth: 32, textAlign: "right" }}>{(pct * 100).toFixed(0)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
       {/* Modais */}
       {modalFiltro && (
         <OSListModal title={modalFiltro.title} ordens={modalFiltro.ordens} onClose={() => setModalFiltro(null)} />

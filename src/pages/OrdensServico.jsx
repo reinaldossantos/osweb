@@ -484,6 +484,14 @@ export function OSDetalhe({ os, onClose }) {
   const [itens, setItens] = useState([]);
   const [status, setStatus] = useState(os.status);
   const [loading, setLoading] = useState(false);
+  const [showInstaladorModal, setShowInstaladorModal] = useState(false);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [instaladorId, setInstaladorId] = useState("");
+
+  useEffect(() => {
+    supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome")
+      .then(({ data }) => setFuncionarios(data || []));
+  }, []);
 
   useEffect(() => { loadDetalhes(); }, []);
 
@@ -504,24 +512,48 @@ export function OSDetalhe({ os, onClose }) {
     loadDetalhes();
   };
 
+  const confirmarInstalador = async () => {
+    if (!instaladorId) { toast.error("⚠️ Selecione o responsável pela instalação."); return; }
+    setShowInstaladorModal(false);
+    await executarSalvarStatus("em_instalacao", instaladorId);
+  };
+
   const salvarStatus = async () => {
     if (status === os.status) { toast("Status não foi alterado."); return; }
+    if (status === "em_instalacao") {
+      setShowInstaladorModal(true);
+      return;
+    }
+    await executarSalvarStatus(status, null);
+  };
+
+  const executarSalvarStatus = async (novoStatus, responsavelInstalacaoId) => {
     setLoading(true);
     try {
+      const extra = {};
+      if (novoStatus === "concluida")    extra.data_conclusao = new Date().toISOString();
+      if (responsavelInstalacaoId)       extra.responsavel_instalacao_id = responsavelInstalacaoId;
+
       const { error } = await supabase.from("ordens_servico")
-        .update({ status, ...(status === "concluida" ? { data_conclusao: new Date().toISOString() } : {}) })
+        .update({ status: novoStatus, ...extra })
         .eq("id", os.id);
       if (error) throw error;
 
+      const responsavelNome = responsavelInstalacaoId
+        ? funcionarios.find(f => f.id === responsavelInstalacaoId)?.nome
+        : null;
+
       const anterior = STATUS_CONFIG[os.status]?.label || os.status;
-      const novo     = STATUS_CONFIG[status]?.label     || status;
+      const novo     = STATUS_CONFIG[novoStatus]?.label || novoStatus;
+      const descExtra = responsavelNome ? ` · Responsável: ${responsavelNome}` : "";
+
       await supabase.from("os_historico").insert({
         os_id: os.id, usuario_id: usuario?.id || null,
         tipo_evento: "status_alterado",
-        descricao: `Status alterado: ${anterior} → ${novo}`,
-        valor_anterior: os.status, valor_novo: status,
+        descricao: `Status alterado: ${anterior} → ${novo}${descExtra}`,
+        valor_anterior: os.status, valor_novo: novoStatus,
       });
-      toast.success(`✅ Status → "${novo}"`);
+      toast.success(`✅ Status → "${novo}"${responsavelNome ? ` | Responsável: ${responsavelNome}` : ""}`);
       onClose();
     } catch (err) {
       toast.error("Erro: " + err.message);
@@ -531,13 +563,14 @@ export function OSDetalhe({ os, onClose }) {
   };
 
   const infoRows = [
-    ["Lançamento",     fmtDateTime(os.data_lancamento)],
-    ["Entrega",        fmtDate(os.data_entrega_prevista)],
-    ["Cliente",        os.clientes?.nome],
-    ["Cidade",         os.cidade],
-    ["Lançado por",    os.usuarios?.funcionarios?.nome],
-    ["Nº OS Externo",  os.numero_os_externo],
-    ["Valor",          fmt(os.valor_total)],
+    ["Lançamento",        fmtDateTime(os.data_lancamento)],
+    ["Entrega",           fmtDate(os.data_entrega_prevista)],
+    ["Cliente",           os.clientes?.nome],
+    ["Cidade",            os.cidade],
+    ["Lançado por",       os.usuarios?.funcionarios?.nome],
+    ["Nº OS Externo",     os.numero_os_externo],
+    ["Resp. Instalação",  os.resp_instalacao?.nome],
+    ["Valor",             fmt(os.valor_total)],
   ].filter(([, v]) => v);
 
   return (
@@ -619,6 +652,46 @@ export function OSDetalhe({ os, onClose }) {
       )}
     </div>
   );
+      {/* Modal: responsável pela instalação */}
+      {showInstaladorModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,23,42,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420, boxShadow: "0 32px 80px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", background: "#FFF7ED", borderBottom: "2px solid #FB923C" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#0F172A" }}>🔧 Responsável pela Instalação</div>
+              <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>OS #{os.numero_os} — {os.titulo}</div>
+            </div>
+            <div style={{ padding: "20px 24px" }}>
+              <p style={{ margin: "0 0 14px", fontSize: 14, color: "#374151" }}>
+                Selecione o funcionário responsável por executar a instalação:
+              </p>
+              <select
+                value={instaladorId}
+                onChange={e => setInstaladorId(e.target.value)}
+                style={{ ...inputStyle, width: "100%", marginBottom: 20 }}
+              >
+                <option value="">Selecione o responsável...</option>
+                {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              </select>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => { setShowInstaladorModal(false); setInstaladorId(""); }}
+                  style={{ ...btnSecondary }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarInstalador}
+                  style={{ ...btnPrimary, background: "#F97316" }}
+                >
+                  ✅ Confirmar Instalação
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── ORDENS DE SERVIÇO (LISTA) ────────────────────────────────
@@ -637,7 +710,7 @@ export function OrdensServico() {
     setLoading(true);
     const { data } = await supabase
       .from("ordens_servico")
-      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome))")
+      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome)), resp_instalacao:responsavel_instalacao_id(nome)")
       .order("created_at", { ascending: false });
     setOrdens(data || []);
     setLoading(false);
