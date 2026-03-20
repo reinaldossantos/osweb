@@ -57,7 +57,7 @@ function TelaLogin({ onCadastro, onEsqueceu }) {
             margin: 0,
           }}
         >
-          OSWeb 1.0
+          OSWeb 1.7
         </h1>
         <p style={{ margin: "6px 0 0", color: "#64748B", fontSize: 14 }}>
           Sistema de Ordens de Serviço
@@ -761,7 +761,7 @@ export default function LoginPage() {
             color: "#CBD5E1",
           }}
         >
-          Gestão de O.S. · OSWeb 1.0
+          Gestão de O.S. · OSWeb 1.7
         </p>
       </div>
     </div>
