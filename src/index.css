@@ -99,3 +99,36 @@ button {
 button:active {
   transform: scale(0.98);
 }
+
+/* ── Touch / TV Touchscreen ───────────────────────────────── */
+
+/* Garante área de toque mínima de 44px em todos os botões */
+button, select, [role="button"] {
+  min-height: 36px;
+  touch-action: manipulation; /* remove delay de 300ms em tap */
+}
+
+/* Elimina highlight azul/cinza ao tocar em elementos no mobile/TV */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Melhora scroll suave em containers com overflow em touch */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Cards do dashboard — área de toque aumentada */
+.dash-card {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* TV card — área de toque grande */
+.tv-card {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}

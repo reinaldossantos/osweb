@@ -783,23 +783,43 @@ export function OrdensServico() {
           ref={el => {
             if (!el) return;
             let isDown = false, startX, startY, scrollLeft, scrollTop;
+
+            // ── Mouse (desktop) ──────────────────────────────
             el.onmousedown = e => {
-              // só ativa em cliques na área de scroll (não em botões/selects)
-              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" || e.target.closest("button") || e.target.closest("select")) return;
+              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" ||
+                  e.target.closest("button") || e.target.closest("select")) return;
               isDown = true; el.style.cursor = "grabbing";
               startX = e.pageX - el.offsetLeft; startY = e.pageY - el.offsetTop;
               scrollLeft = el.scrollLeft; scrollTop = el.scrollTop;
             };
             el.onmouseleave = () => { isDown = false; el.style.cursor = "default"; };
-            el.onmouseup   = () => { isDown = false; el.style.cursor = "default"; };
-            el.onmousemove = e => {
+            el.onmouseup    = () => { isDown = false; el.style.cursor = "default"; };
+            el.onmousemove  = e => {
               if (!isDown) return;
               e.preventDefault();
               el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
               el.scrollTop  = scrollTop  - (e.pageY - el.offsetTop  - startY);
             };
+
+            // ── Touch (TV touchscreen / tablet / mobile) ─────
+            el.ontouchstart = e => {
+              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" ||
+                  e.target.closest("button") || e.target.closest("select")) return;
+              const t = e.touches[0];
+              isDown = true;
+              startX = t.pageX - el.offsetLeft; startY = t.pageY - el.offsetTop;
+              scrollLeft = el.scrollLeft; scrollTop = el.scrollTop;
+            };
+            el.ontouchend  = () => { isDown = false; };
+            el.ontouchmove = e => {
+              if (!isDown) return;
+              e.preventDefault();
+              const t = e.touches[0];
+              el.scrollLeft = scrollLeft - (t.pageX - el.offsetLeft - startX);
+              el.scrollTop  = scrollTop  - (t.pageY - el.offsetTop  - startY);
+            };
           }}
-          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "65vh", cursor: "default" }}
+          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "65vh", cursor: "default", touchAction: "pan-x pan-y" }}
         >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
