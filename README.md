@@ -242,3 +242,50 @@ npm run dev   # http://localhost:5173
 
 ## 🆘 Suporte
 [Supabase Docs](https://supabase.com/docs) · [React](https://react.dev) · [Lucide Icons](https://lucide.dev) · [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans)
+
+---
+
+## 🔧 Manutenção do Banco *(somente Administrador)*
+
+Acessível pelo menu **"Manutenção"** na sidebar (visível apenas para administradores).
+
+### Painel de Contagens
+Exibe em tempo real quantos registros existem em cada tabela:
+Total OS · Concluídas · Canceladas · Histórico · Itens · Etapas OS · Clientes · Tipos de OS · Funcionários
+
+### Operações Disponíveis
+
+| Operação | O que remove | Mantém |
+|---|---|---|
+| 🔴 **Reset Completo** | Todas as OS + histórico + itens + etapas + clientes | Usuários, funcionários, tipos OS, serviços, formas de pagamento |
+| 🟢 **OS Concluídas** | Apenas OS com status Concluída + histórico/itens/etapas vinculados | Todas as outras OS |
+| 🔴 **OS Canceladas** | Apenas OS com status Cancelada + dados vinculados | Todas as outras OS |
+| 🟣 **Histórico** | Todos os registros de histórico de alterações | As OS e seus dados ficam intactos |
+| 🟡 **Clientes sem OS** | Clientes que não têm nenhuma OS vinculada | Clientes com OS ativas ou encerradas |
+| 🟠 **Todos os Clientes** | Todos os clientes cadastrados (desvincula das OS antes) | As OS ficam, só o campo cliente fica em branco |
+| 🟣 **Tipos de OS** | Todos os tipos cadastrados (ACM, BANNER, LONA...) | As OS ficam, só o campo tipo fica em branco |
+
+### Segurança
+- Cada operação exige digitar **`CONFIRMAR`** em maiúsculas antes de executar
+- O botão de exclusão só ativa após a digitação correta
+- Operações desabilitadas automaticamente quando não há registros
+- Log de sessão registra todas as operações com hora
+- Overlay de "aguarde" impede duplo clique durante o processamento
+
+> ⚠️ **Recomendação**: use o **Reset Completo** para limpar dados de teste antes de colocar o sistema em produção. As operações são irreversíveis — não há desfazer.
+
+---
+
+## 📄 Arquivos SQL — Ordem de Execução
+
+| Ordem | Arquivo | Descrição |
+|---|---|---|
+| 1 | `supabase_schema.sql` | Criação inicial: tabelas, triggers, RLS, seed |
+| 2 | `correcao_historico.sql` | Corrige histórico para registrar usuário |
+| 3 | `migracao_status.sql` | Renomeia `aguardando` → `em_aberto`, adiciona `aprovada` |
+| 4 | `migracao_novos_campos.sql` | Adiciona `cidade`, `numero_os_externo`, Cheque e Bonificação |
+| 5 | `migracao_em_instalacao.sql` | Adiciona status `em_instalacao` |
+| 6 | `migracao_responsavel_instalacao.sql` | Adiciona campo `responsavel_instalacao_id` |
+| 7 | `seed_corrigido.sql` | Opcional — recarrega dados de seed |
+
+> ⚠️ Os arquivos de migração (3 a 6) são **obrigatórios** para quem já tinha o sistema instalado anteriormente.

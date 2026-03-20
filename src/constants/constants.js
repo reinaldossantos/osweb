@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, Plus, Users, Briefcase,
   CreditCard, Tag, UserPlus, Package, Layers, Building2,
-  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays, Wrench,
+  Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays, Wrench, ShieldAlert,
 } from "lucide-react";
 
 export const STATUS_CONFIG = {
@@ -37,6 +37,8 @@ export const NAV_ITEMS = [
   { key: "usuarios",         label: "Usuários",             Icon: UserPlus,  adminOnly: true },
   { key: "agenda",           label: "Agenda",               Icon: CalendarDays },
   { key: "relatorios",       label: "Relatórios",           Icon: BarChart3 },
+  { key: "divider3" },
+  { key: "manutencao",       label: "Manutenção",           Icon: ShieldAlert, adminOnly: true },
 ];
 
 export const fmt = (v) =>
