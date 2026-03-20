@@ -289,7 +289,7 @@ function TVMode({ cards, stats, onClose, load }) {
                 letterSpacing: "-0.3px",
               }}
             >
-              OSWeb 1.0 — Painel de Produção
+              OSWeb 1.7 — Painel de Produção
             </div>
             <div
               style={{
