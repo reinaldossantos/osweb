@@ -650,8 +650,6 @@ export function OSDetalhe({ os, onClose }) {
           ))}
         </div>
       )}
-    </div>
-  );
       {/* Modal: responsável pela instalação */}
       {showInstaladorModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,23,42,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
