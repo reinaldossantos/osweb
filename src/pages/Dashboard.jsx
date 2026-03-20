@@ -1,24 +1,64 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 import { StatusBadge, PrioridadeBadge, Modal } from "../components/components";
 import { fmt, fmtDate, isAtrasada, isHoje, STATUS_CONFIG } from "../constants/constants";
 import { OSDetalhe } from "./OrdensServico";
 import {
   FileText, PlayCircle, Clock, AlertTriangle, AlertCircle, Calendar,
   TrendingUp, CheckCircle2, XCircle, DollarSign, BarChart3,
-  RefreshCw, Wrench,
+  RefreshCw, Wrench, Tv, X, Maximize2,
 } from "lucide-react";
 
-// ─── MODAL: LISTA DE OS POR FILTRO ───────────────────────────
+// ─── CSS GLOBAL (keyframes) ───────────────────────────────────
+const DASH_STYLES = `
+  @keyframes kf-pulse {
+    0%,100% { transform: scale(1);    box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    50%      { transform: scale(1.05); box-shadow: 0 12px 32px rgba(0,0,0,0.28); }
+  }
+  @keyframes kf-blink-red {
+    0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.3); }
+    50%      { box-shadow: 0 0 0 12px rgba(239,68,68,0.22), 0 4px 20px rgba(239,68,68,0.6); transform: scale(1.03); }
+  }
+  @keyframes kf-shake-orange {
+    0%,100% { transform: scale(1)    rotate(0deg);   box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
+    20%      { transform: scale(1.04) rotate(-1.5deg); }
+    40%      { transform: scale(1.04) rotate(1.5deg);  box-shadow: 0 8px 28px rgba(249,115,22,0.65); }
+    60%      { transform: scale(1.03) rotate(-1deg); }
+    80%      { transform: scale(1.02) rotate(1deg); }
+  }
+  @keyframes kf-glow-violet {
+    0%,100% { box-shadow: 0 2px 8px rgba(124,58,237,0.35); transform: scale(1); }
+    50%      { box-shadow: 0 0 0 10px rgba(124,58,237,0.2), 0 4px 24px rgba(124,58,237,0.7); transform: scale(1.03); }
+  }
+  .dash-card { cursor: pointer; }
+  .dash-card:hover { filter: brightness(1.1) !important; transform: translateY(-4px) scale(1.02) !important; transition: all 0.15s !important; }
+  .eff-pulse        { animation: kf-pulse        2.5s ease-in-out infinite; }
+  .eff-blink-red    { animation: kf-blink-red    1.3s ease-in-out infinite; }
+  .eff-shake-orange { animation: kf-shake-orange 2.2s ease-in-out infinite; }
+  .eff-glow-violet  { animation: kf-glow-violet  2s   ease-in-out infinite; }
+
+  /* TV Mode */
+  .tv-mode-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0F172A;
+    display: flex; flex-direction: column;
+  }
+  .tv-card {
+    border-radius: 20px; cursor: pointer;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: filter 0.2s;
+  }
+  .tv-card:hover { filter: brightness(1.12); }
+`;
+
+// ─── MODAL: LISTA DE OS ───────────────────────────────────────
 function OSListModal({ title, ordens, onClose }) {
   const [selectedOS, setSelectedOS] = useState(null);
-
   return (
     <>
       <Modal title={title} onClose={onClose} size="xl">
-        <p style={{ margin: "0 0 12px", fontSize: 12, color: "#9CA3AF" }}>
-          Clique em uma O.S. para ver os detalhes completos.
-        </p>
+        <p style={{ margin: "0 0 12px", fontSize: 12, color: "#9CA3AF" }}>Clique em uma O.S. para ver os detalhes.</p>
         <div style={{ overflowX: "auto" }}>
           {ordens.length === 0 ? (
             <p style={{ textAlign: "center", color: "#9CA3AF", padding: 40 }}>Nenhuma O.S. encontrada.</p>
@@ -26,31 +66,28 @@ function OSListModal({ title, ordens, onClose }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
-                  {["Nº OS", "Cliente", "Título", "Status", "Prioridade", "Entrega", "Valor"].map(h => (
+                  {["Nº OS","Cliente","Título","Status","Prioridade","Entrega","Valor"].map(h => (
                     <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#6B7280", fontSize: 12, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {ordens.map((os, i) => (
-                  <tr
-                    key={os.id}
-                    onClick={() => setSelectedOS(os)}
-                    style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer", transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
-                    onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
+                  <tr key={os.id} onClick={() => setSelectedOS(os)}
+                    style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i%2===0?"#fff":"#FAFAFA", cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#F5F3FF"}
+                    onMouseLeave={e => e.currentTarget.style.background=isAtrasada(os)?"#FFF7F7":i%2===0?"#fff":"#FAFAFA"}
                   >
-                    <td style={{ padding: "12px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
-                    <td style={{ padding: "12px 14px" }}>{os.clientes?.nome || "—"}</td>
-                    <td style={{ padding: "12px 14px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
-                    <td style={{ padding: "12px 14px" }}><StatusBadge status={os.status} /></td>
-                    <td style={{ padding: "12px 14px" }}><PrioridadeBadge prioridade={os.prioridade} /></td>
-                    <td style={{ padding: "12px 14px", color: isAtrasada(os) ? "#DC2626" : "#374151", fontWeight: isAtrasada(os) ? 700 : 400, whiteSpace: "nowrap" }}>
+                    <td style={{ padding:"12px 14px", fontWeight:700, color:"#7C3AED" }}>#{os.numero_os}</td>
+                    <td style={{ padding:"12px 14px" }}>{os.clientes?.nome||"—"}</td>
+                    <td style={{ padding:"12px 14px", maxWidth:200, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{os.titulo}</td>
+                    <td style={{ padding:"12px 14px" }}><StatusBadge status={os.status}/></td>
+                    <td style={{ padding:"12px 14px" }}><PrioridadeBadge prioridade={os.prioridade}/></td>
+                    <td style={{ padding:"12px 14px", color:isAtrasada(os)?"#DC2626":"#374151", fontWeight:isAtrasada(os)?700:400, whiteSpace:"nowrap" }}>
                       {fmtDate(os.data_entrega_prevista)}
-                      {isAtrasada(os) && <span style={{ display: "block", fontSize: 10, color: "#DC2626" }}>⚠ ATRASADA</span>}
-                      {isHoje(os) && !isAtrasada(os) && <span style={{ display: "block", fontSize: 10, color: "#D97706" }}>📅 HOJE</span>}
+                      {isAtrasada(os) && <span style={{ display:"block", fontSize:10, color:"#DC2626" }}>⚠ ATRASADA</span>}
                     </td>
-                    <td style={{ padding: "12px 14px", fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(os.valor_total)}</td>
+                    <td style={{ padding:"12px 14px", fontWeight:600 }}>{fmt(os.valor_total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -58,7 +95,6 @@ function OSListModal({ title, ordens, onClose }) {
           )}
         </div>
       </Modal>
-
       {selectedOS && (
         <Modal title={`O.S. #${selectedOS.numero_os} — ${selectedOS.titulo}`} onClose={() => setSelectedOS(null)} size="lg">
           <OSDetalhe os={selectedOS} onClose={() => setSelectedOS(null)} />
@@ -68,13 +104,124 @@ function OSListModal({ title, ordens, onClose }) {
   );
 }
 
-// ─── DASHBOARD ────────────────────────────────────────────────
+// ─── TV MODE ─────────────────────────────────────────────────
+function TVMode({ cards, stats, onClose, load }) {
+  const [tick, setTick] = useState(0);
+  const [modalFiltro, setModalFiltro] = useState(null);
+  const [ultimaRefresh, setUltimaRefresh] = useState(new Date());
+
+  // Auto-refresh a cada 60s
+  useEffect(() => {
+    const id = setInterval(() => {
+      load();
+      setUltimaRefresh(new Date());
+      setTick(t => t+1);
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const now = new Date();
+  const hora = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const data = now.toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" });
+
+  // Only status cards (exclude financial)
+  const tvCards = cards.filter(c => !["valorTotal","valorAbertas","valorConcluidas"].includes(c._key));
+
+  return (
+    <div className="tv-mode-overlay">
+      <style>{DASH_STYLES}</style>
+
+      {/* Header TV */}
+      <div style={{ padding: "18px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1E293B", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ background: "#7C3AED", borderRadius: 12, padding: "8px 10px" }}>
+            <Tv size={22} color="#fff" />
+          </div>
+          <div>
+            <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "-0.3px" }}>OSWeb 1.0 — Painel de Produção</div>
+            <div style={{ color: "#64748B", fontSize: 13, marginTop: 2, textTransform: "capitalize" }}>{data}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#fff", fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{hora}</div>
+            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>Atualização automática a cada 60s</div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "#1E293B", border: "1px solid #334155", color: "#94A3B8", borderRadius: 10, padding: "10px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600 }}
+          >
+            <X size={16} /> Sair do Modo TV
+          </button>
+        </div>
+      </div>
+
+      {/* Cards grid — ocupa todo o espaço restante */}
+      <div style={{ flex: 1, padding: "24px 28px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 18, alignContent: "start", overflowY: "auto" }}>
+        {tvCards.map(({ label, value, Icon, bg, icon, color, effect, filtro }) => (
+          <div
+            key={label}
+            onClick={() => filtro && setModalFiltro({ title: label, ordens: filtro() })}
+            className={`tv-card${effect ? " eff-" + effect : ""}`}
+            style={{ background: bg, padding: "28px 26px", minHeight: 160, boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <p style={{ margin: 0, fontSize: 14, color: color === "#fff" ? "rgba(255,255,255,0.8)" : "#6B7280", fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase" }}>{label}</p>
+              <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 12, padding: 10 }}>
+                <Icon size={24} color={icon} />
+              </div>
+            </div>
+            <p style={{ margin: "16px 0 8px", fontSize: 56, fontWeight: 900, color, lineHeight: 1 }}>{value}</p>
+            <p style={{ margin: 0, fontSize: 11, color: color === "#fff" ? "rgba(255,255,255,0.5)" : "#9CA3AF" }}>▸ toque para ver OS</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal filtro dentro do TV mode */}
+      {modalFiltro && (
+        <div onClick={e => e.target===e.currentTarget&&setModalFiltro(null)}
+          style={{ position:"fixed", inset:0, zIndex:10000, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:"#1E293B", borderRadius:20, width:"100%", maxWidth:700, maxHeight:"80vh", overflow:"auto", border:"1px solid #334155" }}>
+            <div style={{ padding:"18px 24px", borderBottom:"1px solid #334155", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:"#fff", fontSize:17, fontWeight:700 }}>{modalFiltro.title} — {modalFiltro.ordens.length} OS</div>
+              <button onClick={()=>setModalFiltro(null)} style={{ background:"#334155", border:"none", color:"#94A3B8", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            </div>
+            <div style={{ padding:16 }}>
+              {modalFiltro.ordens.length===0
+                ? <p style={{ color:"#64748B", textAlign:"center", padding:40 }}>Nenhuma OS.</p>
+                : modalFiltro.ordens.map(os => {
+                  const cfg = STATUS_CONFIG[os.status]||STATUS_CONFIG.em_aberto;
+                  return (
+                    <div key={os.id} style={{ borderLeft:`4px solid ${cfg.border}`, borderRadius:12, padding:"14px 16px", marginBottom:8, background:"#0F172A", border:`1px solid #1E293B`, borderLeftWidth:4 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                        <span style={{ color:"#7C3AED", fontWeight:700, fontSize:13 }}>OS #{os.numero_os}</span>
+                        <StatusBadge status={os.status}/>
+                      </div>
+                      <div style={{ color:"#E2E8F0", fontWeight:600, fontSize:14 }}>{os.titulo}</div>
+                      <div style={{ color:"#64748B", fontSize:12, marginTop:4 }}>{os.clientes?.nome} · {fmtDate(os.data_entrega_prevista)}</div>
+                    </div>
+                  );
+                })
+              }
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── DASHBOARD PRINCIPAL ──────────────────────────────────────
 export default function Dashboard() {
+  const { usuario } = useAuth();
   const [all, setAll] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modalFiltro, setModalFiltro] = useState(null);
   const [ultimaOS, setUltimaOS] = useState(null);
+  const [tvMode, setTvMode] = useState(false);
+
+  const isAdmin = usuario?.perfil === "admin";
 
   useEffect(() => { load(); }, []);
 
@@ -88,216 +235,176 @@ export default function Dashboard() {
 
     const lista = data || [];
     setAll(lista);
-
     setStats({
       total:                lista.length,
       em_aberto:            lista.filter(o => o.status === "em_aberto").length,
-      em_producao:          lista.filter(o => o.status === "em_producao").length,
       aguardando_aprovacao: lista.filter(o => o.status === "aguardando_aprovacao").length,
+      aprovada:             lista.filter(o => o.status === "aprovada").length,
+      em_producao:          lista.filter(o => o.status === "em_producao").length,
+      em_instalacao:        lista.filter(o => o.status === "em_instalacao").length,
       concluida:            lista.filter(o => o.status === "concluida").length,
       cancelada:            lista.filter(o => o.status === "cancelada").length,
       atrasadas:            lista.filter(isAtrasada).length,
       hoje:                 lista.filter(o => isHoje(o) && !["concluida","cancelada"].includes(o.status)).length,
       lancadasHoje:         lista.filter(o => o.data_lancamento?.startsWith(hoje)).length,
-      valorTotal:           lista.reduce((s, o) => s + (o.valor_total || 0), 0),
-      valorAbertas:         lista.filter(o => !["concluida","cancelada"].includes(o.status)).reduce((s, o) => s + (o.valor_total || 0), 0),
-      valorConcluidas:      lista.filter(o => o.status === "concluida").reduce((s, o) => s + (o.valor_total || 0), 0),
+      valorTotal:           lista.reduce((s,o) => s+(o.valor_total||0), 0),
+      valorAbertas:         lista.filter(o => !["concluida","cancelada"].includes(o.status)).reduce((s,o) => s+(o.valor_total||0), 0),
+      valorConcluidas:      lista.filter(o => o.status==="concluida").reduce((s,o) => s+(o.valor_total||0), 0),
     });
     setLoading(false);
   };
 
-  // Abre modal com as OS filtradas pelo card clicado
-  const abrirFiltro = (title, filtroFn) => {
-    setModalFiltro({ title, ordens: all.filter(filtroFn) });
-  };
+  const abrirFiltro = (title, filtroFn) => setModalFiltro({ title, ordens: all.filter(filtroFn) });
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#6B7280" }}>Carregando...</div>;
+  if (loading) return <div style={{ padding:40, textAlign:"center", color:"#6B7280" }}>Carregando...</div>;
   if (!stats) return null;
 
   const hoje = new Date().toISOString().split("T")[0];
 
   const cards = [
-    {
-      label: "Total de OS",        value: stats.total,
-      color: "#fff", bg: "#7C3AED", icon: "#fff",
-      filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true),
-      Icon: FileText, effect: null,
-    },
-    {
-      label: "Em Aberto",          value: stats.em_aberto,
-      color: "#fff", bg: "#0EA5E9", icon: "#fff",
-      filtro: () => abrirFiltro("OS Em Aberto", o => o.status === "em_aberto"),
-      Icon: Clock, effect: "pulse-blue",
-    },
-    {
-      label: "Aguard. Aprovação",  value: stats.aguardando_aprovacao,
-      color: "#fff", bg: "#F97316", icon: "#fff",
-      filtro: () => abrirFiltro("OS Aguardando Aprovação", o => o.status === "aguardando_aprovacao"),
-      Icon: AlertCircle, effect: "pulse-orange",
-    },
-    {
-      label: "Aprovada",           value: stats.aprovada,
-      color: "#fff", bg: "#10B981", icon: "#fff",
-      filtro: () => abrirFiltro("OS Aprovadas", o => o.status === "aprovada"),
-      Icon: CheckCircle2, effect: null,
-    },
-    {
-      label: "Em Produção",        value: stats.em_producao,
-      color: "#fff", bg: "#8B5CF6", icon: "#fff",
-      filtro: () => abrirFiltro("OS Em Produção", o => o.status === "em_producao"),
-      Icon: PlayCircle, effect: null,
-    },
-    {
-      label: "Em Instalação",      value: stats.em_instalacao,
-      color: "#fff", bg: "#F59E0B", icon: "#fff",
-      filtro: () => abrirFiltro("OS Em Instalação", o => o.status === "em_instalacao"),
-      Icon: Wrench, effect: null,
-    },
-    {
-      label: "Em Atraso",          value: stats.atrasadas,
-      color: "#fff", bg: "#EF4444", icon: "#fff",
-      filtro: () => abrirFiltro("OS Em Atraso", isAtrasada),
-      Icon: AlertTriangle, effect: "blink-red",
-    },
-    {
-      label: "Para Hoje",          value: stats.hoje,
-      color: "#fff", bg: "#7C3AED", icon: "#fff",
-      filtro: () => abrirFiltro("OS com Entrega Hoje", o => isHoje(o) && !["concluida","cancelada"].includes(o.status)),
-      Icon: Calendar, effect: "pulse-violet",
-    },
-    {
-      label: "Lançadas Hoje",      value: stats.lancadasHoje,
-      color: "#fff", bg: "#059669", icon: "#fff",
-      filtro: () => abrirFiltro("OS Lançadas Hoje", o => o.data_lancamento?.startsWith(hoje)),
-      Icon: TrendingUp, effect: null,
-    },
-    {
-      label: "Concluídas",         value: stats.concluida,
-      color: "#fff", bg: "#16A34A", icon: "#fff",
-      filtro: () => abrirFiltro("OS Concluídas", o => o.status === "concluida"),
-      Icon: CheckCircle2, effect: null,
-    },
-    {
-      label: "Canceladas",         value: stats.cancelada,
-      color: "#9CA3AF", bg: "#F3F4F6", icon: "#9CA3AF",
-      filtro: () => abrirFiltro("OS Canceladas", o => o.status === "cancelada"),
-      Icon: XCircle, effect: null,
-    },
+    { _key:"total",    label:"Total de OS",       value:stats.total,                Icon:FileText,      bg:"#7C3AED", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("Todas as OS",()=>true) },
+    { _key:"em_aberto", label:"Em Aberto",         value:stats.em_aberto,            Icon:Clock,         bg:"#0EA5E9", icon:"#fff", color:"#fff", effect:"pulse",
+      filtro:()=>abrirFiltro("OS Em Aberto", o=>o.status==="em_aberto") },
+    { _key:"aguard",   label:"Aguard. Aprovação",  value:stats.aguardando_aprovacao, Icon:AlertCircle,   bg:"#F97316", icon:"#fff", color:"#fff", effect:"shake-orange",
+      filtro:()=>abrirFiltro("OS Aguardando Aprovação", o=>o.status==="aguardando_aprovacao") },
+    { _key:"aprovada", label:"Aprovada",           value:stats.aprovada,             Icon:CheckCircle2,  bg:"#10B981", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Aprovadas", o=>o.status==="aprovada") },
+    { _key:"em_prod",  label:"Em Produção",        value:stats.em_producao,          Icon:PlayCircle,    bg:"#8B5CF6", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Em Produção", o=>o.status==="em_producao") },
+    { _key:"em_inst",  label:"Em Instalação",      value:stats.em_instalacao,        Icon:Wrench,        bg:"#F59E0B", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Em Instalação", o=>o.status==="em_instalacao") },
+    { _key:"atraso",   label:"Em Atraso",          value:stats.atrasadas,            Icon:AlertTriangle, bg:"#EF4444", icon:"#fff", color:"#fff", effect:"blink-red",
+      filtro:()=>abrirFiltro("OS Em Atraso", isAtrasada) },
+    { _key:"hoje",     label:"Para Hoje",          value:stats.hoje,                 Icon:Calendar,      bg:"#7C3AED", icon:"#fff", color:"#fff", effect:"glow-violet",
+      filtro:()=>abrirFiltro("OS com Entrega Hoje", o=>isHoje(o)&&!["concluida","cancelada"].includes(o.status)) },
+    { _key:"lancadas", label:"Lançadas Hoje",      value:stats.lancadasHoje,         Icon:TrendingUp,    bg:"#059669", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Lançadas Hoje", o=>o.data_lancamento?.startsWith(hoje)) },
+    { _key:"concl",    label:"Concluídas",         value:stats.concluida,            Icon:CheckCircle2,  bg:"#16A34A", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Concluídas", o=>o.status==="concluida") },
+    { _key:"cancel",   label:"Canceladas",         value:stats.cancelada,            Icon:XCircle,       bg:"#F3F4F6", icon:"#9CA3AF", color:"#6B7280", effect:null,
+      filtro:()=>abrirFiltro("OS Canceladas", o=>o.status==="cancelada") },
   ];
 
   const valorCards = [
-    { label: "Valor Total Geral", value: fmt(stats.valorTotal),      Icon: DollarSign, bg: "#7C3AED",
-      filtro: () => abrirFiltro("Todas as Ordens de Serviço", () => true) },
-    { label: "Valor em Aberto",   value: fmt(stats.valorAbertas),    Icon: BarChart3,  bg: "#F97316",
-      filtro: () => abrirFiltro("OS em Aberto", o => !["concluida","cancelada"].includes(o.status)) },
-    { label: "Valor Concluído",   value: fmt(stats.valorConcluidas), Icon: TrendingUp, bg: "#16A34A",
-      filtro: () => abrirFiltro("OS Concluídas", o => o.status === "concluida") },
+    { label:"Valor Total Geral", value:fmt(stats.valorTotal),      Icon:DollarSign, bg:"#7C3AED",
+      filtro:()=>abrirFiltro("Todas as OS",()=>true) },
+    { label:"Valor em Aberto",   value:fmt(stats.valorAbertas),    Icon:BarChart3,  bg:"#F97316",
+      filtro:()=>abrirFiltro("OS em Aberto", o=>!["concluida","cancelada"].includes(o.status)) },
+    { label:"Valor Concluído",   value:fmt(stats.valorConcluidas), Icon:TrendingUp, bg:"#16A34A",
+      filtro:()=>abrirFiltro("OS Concluídas", o=>o.status==="concluida") },
   ];
+
+  // TV Mode — passa filtro como função que retorna ordens
+  const cardsParaTV = cards.map(c => ({
+    ...c,
+    filtro: () => all.filter(
+      c._key === "total"    ? () => true :
+      c._key === "em_aberto"? o => o.status==="em_aberto" :
+      c._key === "aguard"   ? o => o.status==="aguardando_aprovacao" :
+      c._key === "aprovada" ? o => o.status==="aprovada" :
+      c._key === "em_prod"  ? o => o.status==="em_producao" :
+      c._key === "em_inst"  ? o => o.status==="em_instalacao" :
+      c._key === "atraso"   ? isAtrasada :
+      c._key === "hoje"     ? o => isHoje(o)&&!["concluida","cancelada"].includes(o.status) :
+      c._key === "lancadas" ? o => o.data_lancamento?.startsWith(hoje) :
+      c._key === "concl"    ? o => o.status==="concluida" :
+                              o => o.status==="cancelada"
+    )
+  }));
+
+  if (tvMode) return <TVMode cards={cardsParaTV} stats={stats} onClose={() => setTvMode(false)} load={load} />;
 
   return (
     <div>
+      <style>{DASH_STYLES}</style>
+
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "#111827" }}>Dashboard</h1>
-          <p style={{ margin: "4px 0 0", color: "#6B7280", fontSize: 14 }}>
-            {new Date().toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          <h1 style={{ margin:0, fontSize:26, fontWeight:800, color:"#111827" }}>Dashboard</h1>
+          <p style={{ margin:"4px 0 0", color:"#6B7280", fontSize:14 }}>
+            {new Date().toLocaleDateString("pt-BR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
           </p>
         </div>
-        <button onClick={load} style={{ background: "#F3F4F6", color: "#374151", border: "1px solid #D1D5DB", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <RefreshCw size={14} /> Atualizar
-        </button>
+        <div style={{ display:"flex", gap:10 }}>
+          <button
+            onClick={() => setTvMode(true)}
+            style={{ background:"#7C3AED", color:"#fff", border:"none", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, boxShadow:"0 2px 8px rgba(124,58,237,0.35)" }}
+          >
+            <Tv size={15} /> Modo TV
+          </button>
+          <button
+            onClick={load}
+            style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:6 }}
+          >
+            <RefreshCw size={14} /> Atualizar
+          </button>
+        </div>
       </div>
 
-      {/* Keyframes para efeitos de atenção */}
-      <style>{`
-        @keyframes pulse-scale {
-          0%,100% { transform: scale(1); }
-          50%      { transform: scale(1.04); box-shadow: 0 8px 28px rgba(0,0,0,0.22); }
-        }
-        @keyframes blink-red {
-          0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.3); }
-          50%      { box-shadow: 0 0 0 10px rgba(239,68,68,0.25), 0 2px 8px rgba(239,68,68,0.5); }
-        }
-        @keyframes glow-orange {
-          0%,100% { box-shadow: 0 2px 8px rgba(249,115,22,0.35); }
-          50%      { box-shadow: 0 4px 22px rgba(249,115,22,0.65); }
-        }
-        @keyframes glow-violet {
-          0%,100% { box-shadow: 0 2px 8px rgba(124,58,237,0.35); }
-          50%      { box-shadow: 0 4px 22px rgba(124,58,237,0.65); }
-        }
-        .dash-card { cursor: pointer; transition: transform 0.15s, filter 0.15s; }
-        .dash-card:hover { transform: translateY(-4px) !important; filter: brightness(1.1); animation-play-state: paused !important; }
-        .eff-pulse-blue   { animation: pulse-scale  2.5s ease-in-out infinite; }
-        .eff-blink-red    { animation: blink-red    1.3s ease-in-out infinite; }
-        .eff-pulse-orange { animation: glow-orange  2s ease-in-out infinite; }
-        .eff-pulse-violet { animation: glow-violet  2s ease-in-out infinite; }
-      `}</style>
-
-      {/* Cards de contagem — clicáveis */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 24 }}>
+      {/* Cards de status */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(160px, 1fr))", gap:14, marginBottom:24 }}>
         {cards.map(({ label, value, Icon, bg, icon, color, filtro, effect }) => (
           <div
             key={label}
             onClick={filtro}
-            className={`dash-card${effect ? " eff-" + effect : ""}`}
-            style={{ background: bg, borderRadius: 16, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
+            className={`dash-card${effect ? " eff-"+effect : ""}`}
+            style={{ background:bg, borderRadius:16, padding:"18px 20px", boxShadow:"0 2px 8px rgba(0,0,0,0.12)" }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div>
-                <p style={{ margin: 0, fontSize: 11.5, color: color === "#fff" ? "rgba(255,255,255,0.8)" : "#6B7280", fontWeight: 600 }}>{label}</p>
-                <p style={{ margin: "8px 0 0", fontSize: 32, fontWeight: 900, color, lineHeight: 1 }}>{value}</p>
+                <p style={{ margin:0, fontSize:11.5, color:color==="#fff"?"rgba(255,255,255,0.8)":"#6B7280", fontWeight:600 }}>{label}</p>
+                <p style={{ margin:"8px 0 0", fontSize:32, fontWeight:900, color, lineHeight:1 }}>{value}</p>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.22)", borderRadius: 12, padding: 9, flexShrink: 0 }}>
+              <div style={{ background:"rgba(255,255,255,0.22)", borderRadius:12, padding:9, flexShrink:0 }}>
                 <Icon size={20} color={icon} />
               </div>
             </div>
-            <p style={{ margin: "10px 0 0", fontSize: 10.5, color: color === "#fff" ? "rgba(255,255,255,0.6)" : "#9CA3AF" }}>▸ ver detalhes</p>
+            <p style={{ margin:"10px 0 0", fontSize:10.5, color:color==="#fff"?"rgba(255,255,255,0.6)":"#9CA3AF" }}>▸ ver detalhes</p>
           </div>
         ))}
       </div>
 
-      {/* Cards de valor — clicáveis */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14, marginBottom: 30 }}>
-        {valorCards.map(({ label, value, Icon, color, bg, filtro }) => (
-          <div
-            key={label}
-            onClick={filtro}
-            className="dash-card"
-            style={{ background: bg || "#F5F3FF", borderRadius: 16, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.10)" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ background: "rgba(255,255,255,0.3)", borderRadius: 10, padding: 7 }}>
-                <Icon size={18} color="#fff" />
+      {/* Cards financeiros — somente Admin */}
+      {isAdmin && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))", gap:14, marginBottom:30 }}>
+          {valorCards.map(({ label, value, Icon, bg, filtro }) => (
+            <div
+              key={label}
+              onClick={filtro}
+              className="dash-card"
+              style={{ background:bg, borderRadius:16, padding:"20px 24px", boxShadow:"0 2px 8px rgba(0,0,0,0.12)" }}
+            >
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                <div style={{ background:"rgba(255,255,255,0.25)", borderRadius:10, padding:7 }}>
+                  <Icon size={18} color="#fff" />
+                </div>
+                <span style={{ fontSize:12, color:"rgba(255,255,255,0.85)", fontWeight:600 }}>{label}</span>
               </div>
-              <span style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{label}</span>
+              <p style={{ margin:0, fontSize:24, fontWeight:900, color:"#fff" }}>{value}</p>
+              <p style={{ margin:"6px 0 0", fontSize:10.5, color:"rgba(255,255,255,0.6)" }}>▸ ver OS</p>
             </div>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 900, color: "#fff" }}>{value}</p>
-            <p style={{ margin: "6px 0 0", fontSize: 10.5, color: "rgba(255,255,255,0.65)" }}>▸ ver OS</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Distribuição por status */}
-      <div style={{ background: "#fff", borderRadius: 14, padding: 24, border: "1px solid #E5E7EB", marginBottom: 24 }}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "#111827" }}>Distribuição por Status</h3>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ background:"#fff", borderRadius:14, padding:24, border:"1px solid #E5E7EB", marginBottom:24 }}>
+        <h3 style={{ margin:"0 0 16px", fontSize:15, fontWeight:700, color:"#111827" }}>Distribuição por Status</h3>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
             const count = stats[key] || 0;
-            const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+            const pct = stats.total ? Math.round((count/stats.total)*100) : 0;
             return (
-              <div
-                key={key}
-                style={{ flex: "1 1 120px", cursor: "pointer" }}
-                onClick={() => abrirFiltro(`OS — ${cfg.label}`, o => o.status === key)}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: cfg.text }}>{cfg.label}</span>
-                  <span style={{ fontSize: 12, color: "#6B7280" }}>{count}</span>
+              <div key={key} style={{ flex:"1 1 120px", cursor:"pointer" }}
+                onClick={() => abrirFiltro(`OS — ${cfg.label}`, o => o.status===key)}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                  <span style={{ fontSize:12, fontWeight:600, color:cfg.text }}>{cfg.label}</span>
+                  <span style={{ fontSize:12, color:"#6B7280" }}>{count}</span>
                 </div>
-                <div style={{ height: 6, background: "#F3F4F6", borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: cfg.border, borderRadius: 3, transition: "width 0.5s" }} />
+                <div style={{ height:6, background:"#F3F4F6", borderRadius:3 }}>
+                  <div style={{ height:"100%", width:`${pct}%`, background:cfg.border, borderRadius:3, transition:"width 0.5s" }}/>
                 </div>
               </div>
             );
@@ -306,42 +413,40 @@ export default function Dashboard() {
       </div>
 
       {/* Últimas OS */}
-      <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", overflow: "hidden" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111827" }}>Últimas Ordens de Serviço</h3>
-          <span style={{ fontSize: 12, color: "#9CA3AF" }}>Clique em uma linha para ver detalhes</span>
+      <div style={{ background:"#fff", borderRadius:14, border:"1px solid #E5E7EB", overflow:"hidden" }}>
+        <div style={{ padding:"18px 24px", borderBottom:"1px solid #E5E7EB", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <h3 style={{ margin:0, fontSize:15, fontWeight:700, color:"#111827" }}>Últimas Ordens de Serviço</h3>
+          <span style={{ fontSize:12, color:"#9CA3AF" }}>Clique em uma linha para ver detalhes</span>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
             <thead>
-              <tr style={{ background: "#F9FAFB" }}>
-                {["Nº OS", "Cliente", "Título", "Status", "Prioridade", "Entrega", "Valor"].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "#6B7280", whiteSpace: "nowrap" }}>{h}</th>
+              <tr style={{ background:"#F9FAFB" }}>
+                {["Nº OS","Cliente","Título","Status","Prioridade","Entrega","Valor"].map(h => (
+                  <th key={h} style={{ padding:"10px 16px", textAlign:"left", fontWeight:600, color:"#6B7280", whiteSpace:"nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {all.length === 0
-                ? <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma OS cadastrada ainda</td></tr>
-                : all.slice(0, 8).map((os, i) => (
-                  <tr
-                    key={os.id}
-                    onClick={() => setUltimaOS(os)}
-                    style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
-                    onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
+              {all.length===0
+                ? <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>Nenhuma OS cadastrada ainda</td></tr>
+                : all.slice(0,8).map((os,i) => (
+                  <tr key={os.id} onClick={() => setUltimaOS(os)}
+                    style={{ borderTop:"1px solid #F3F4F6", background:isAtrasada(os)?"#FFF7F7":i%2===0?"#fff":"#FAFAFA", cursor:"pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background="#F5F3FF"}
+                    onMouseLeave={e => e.currentTarget.style.background=isAtrasada(os)?"#FFF7F7":i%2===0?"#fff":"#FAFAFA"}
                   >
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
-                    <td style={{ padding: "12px 16px" }}>{os.clientes?.nome || "—"}</td>
-                    <td style={{ padding: "12px 16px", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
-                    <td style={{ padding: "12px 16px" }}><StatusBadge status={os.status} /></td>
-                    <td style={{ padding: "12px 16px" }}><PrioridadeBadge prioridade={os.prioridade} /></td>
-                    <td style={{ padding: "12px 16px", color: isAtrasada(os) ? "#DC2626" : "#374151", fontWeight: isAtrasada(os) ? 700 : 400 }}>
+                    <td style={{ padding:"12px 16px", fontWeight:700, color:"#7C3AED" }}>#{os.numero_os}</td>
+                    <td style={{ padding:"12px 16px" }}>{os.clientes?.nome||"—"}</td>
+                    <td style={{ padding:"12px 16px", maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{os.titulo}</td>
+                    <td style={{ padding:"12px 16px" }}><StatusBadge status={os.status}/></td>
+                    <td style={{ padding:"12px 16px" }}><PrioridadeBadge prioridade={os.prioridade}/></td>
+                    <td style={{ padding:"12px 16px", color:isAtrasada(os)?"#DC2626":"#374151", fontWeight:isAtrasada(os)?700:400 }}>
                       {fmtDate(os.data_entrega_prevista)}
-                      {isAtrasada(os) && <span style={{ display: "block", fontSize: 10, color: "#DC2626" }}>⚠ ATRASADA</span>}
-                      {isHoje(os) && !isAtrasada(os) && <span style={{ display: "block", fontSize: 10, color: "#D97706" }}>📅 HOJE</span>}
+                      {isAtrasada(os) && <span style={{ display:"block", fontSize:10, color:"#DC2626" }}>⚠ ATRASADA</span>}
+                      {isHoje(os) && !isAtrasada(os) && <span style={{ display:"block", fontSize:10, color:"#D97706" }}>📅 HOJE</span>}
                     </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{fmt(os.valor_total)}</td>
+                    <td style={{ padding:"12px 16px", fontWeight:600 }}>{fmt(os.valor_total)}</td>
                   </tr>
                 ))}
             </tbody>
@@ -349,16 +454,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Modal de OS filtradas */}
+      {/* Modais */}
       {modalFiltro && (
-        <OSListModal
-          title={modalFiltro.title}
-          ordens={modalFiltro.ordens}
-          onClose={() => setModalFiltro(null)}
-        />
+        <OSListModal title={modalFiltro.title} ordens={modalFiltro.ordens} onClose={() => setModalFiltro(null)} />
       )}
-
-      {/* Modal detalhe de OS das Últimas OS */}
       {ultimaOS && (
         <Modal title={`O.S. #${ultimaOS.numero_os} — ${ultimaOS.titulo}`} onClose={() => setUltimaOS(null)} size="lg">
           <OSDetalhe os={ultimaOS} onClose={() => setUltimaOS(null)} />
