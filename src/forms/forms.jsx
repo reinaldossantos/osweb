@@ -48,11 +48,19 @@ export function FuncionariosForm({ item, onSaved, onClose }) {
 
   const save = async (e) => {
     e.preventDefault();
+    // cargo_id vazio ("") causa erro uuid no PostgreSQL — converte para null
+    const payload = {
+      nome:     form.nome,
+      email:    form.email,
+      telefone: form.telefone || null,
+      cargo_id: form.cargo_id && form.cargo_id.trim() !== "" ? form.cargo_id : null,
+    };
     const op = item
-      ? supabase.from("funcionarios").update(form).eq("id", item.id)
-      : supabase.from("funcionarios").insert(form);
+      ? supabase.from("funcionarios").update(payload).eq("id", item.id)
+      : supabase.from("funcionarios").insert(payload);
     const { error } = await op;
-    if (!error) onSaved(); else toast.error(error.message);
+    if (!error) onSaved();
+    else toast.error("Erro ao salvar: " + error.message);
   };
 
   return (

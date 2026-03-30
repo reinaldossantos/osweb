@@ -338,6 +338,22 @@ export default function Dashboard() {
   const [ultimaOS, setUltimaOS] = useState(null);
   const [tvMode, setTvMode] = useState(false);
 
+  // Detecta arrasto vs clique nos cards
+  const cardDrag = useRef({ startX: 0, startY: 0, moved: false });
+  const onCardMouseDown = (e) => {
+    cardDrag.current = { startX: e.clientX, startY: e.clientY, moved: false };
+  };
+  const onCardMouseMove = (e) => {
+    if (Math.abs(e.clientX - cardDrag.current.startX) > 6 ||
+        Math.abs(e.clientY - cardDrag.current.startY) > 6) {
+      cardDrag.current.moved = true;
+    }
+  };
+  const guardClick = (fn) => (e) => {
+    if (cardDrag.current.moved) return; // era arrasto
+    fn && fn(e);
+  };
+
   const isAdmin = usuario?.perfil === "admin";
 
   useEffect(() => { load(); }, []);
@@ -465,7 +481,9 @@ export default function Dashboard() {
         {cards.map(({ label, value, Icon, bg, icon, color, filtro, effect }) => (
           <div
             key={label}
-            onClick={filtro}
+            onMouseDown={onCardMouseDown}
+            onMouseMove={onCardMouseMove}
+            onClick={guardClick(filtro)}
             className={`dash-card${effect ? " eff-"+effect : ""}`}
             style={{ background:bg, borderRadius:16, padding:"18px 20px", boxShadow:"0 2px 8px rgba(0,0,0,0.12)" }}
           >
@@ -489,7 +507,9 @@ export default function Dashboard() {
           {valorCards.map(({ label, value, Icon, bg, filtro }) => (
             <div
               key={label}
-              onClick={filtro}
+              onMouseDown={onCardMouseDown}
+              onMouseMove={onCardMouseMove}
+              onClick={guardClick(filtro)}
               className="dash-card"
               style={{ background:bg, borderRadius:16, padding:"20px 24px", boxShadow:"0 2px 8px rgba(0,0,0,0.12)" }}
             >
@@ -515,7 +535,7 @@ export default function Dashboard() {
             const pct = stats.total ? Math.round((count/stats.total)*100) : 0;
             return (
               <div key={key} style={{ flex:"1 1 120px", cursor:"pointer" }}
-                onClick={() => abrirFiltro(`OS — ${cfg.label}`, o => o.status===key)}>
+                onClick={guardClick(() => abrirFiltro(`OS — ${cfg.label}`, o => o.status===key))}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                   <span style={{ fontSize:12, fontWeight:600, color:cfg.text }}>{cfg.label}</span>
                   <span style={{ fontSize:12, color:"#6B7280" }}>{count}</span>
@@ -548,7 +568,7 @@ export default function Dashboard() {
               {all.length===0
                 ? <tr><td colSpan={7} style={{ textAlign:"center", padding:40, color:"#9CA3AF" }}>Nenhuma OS cadastrada ainda</td></tr>
                 : all.slice(0,8).map((os,i) => (
-                  <tr key={os.id} onClick={() => setUltimaOS(os)}
+                  <tr key={os.id} onMouseDown={onCardMouseDown} onMouseMove={onCardMouseMove} onClick={guardClick(() => setUltimaOS(os))}
                     style={{ borderTop:"1px solid #F3F4F6", background:isAtrasada(os)?"#FFF7F7":i%2===0?"#fff":"#FAFAFA", cursor:"pointer" }}
                     onMouseEnter={e => e.currentTarget.style.background="#F5F3FF"}
                     onMouseLeave={e => e.currentTarget.style.background=isAtrasada(os)?"#FFF7F7":i%2===0?"#fff":"#FAFAFA"}
@@ -572,7 +592,7 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos de Volume por Status */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 24, alignItems: "start" }}>
 
         {/* Gráfico de barras horizontal — OS por Status */}
         <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
@@ -594,6 +614,9 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Coluna direita: rosca + colunas empilhadas */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Gráfico de rosca — SVG puro */}
         <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
@@ -656,6 +679,141 @@ export default function Dashboard() {
             );
           })()}
         </div>
+
+        {/* Gráfico de colunas — Produção por status (clicável) */}
+        <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111827" }}>Painel de Produção</h3>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9CA3AF" }}>Volume de OS por status · clique para filtrar</p>
+            </div>
+            <div style={{ fontSize: 12, color: "#9CA3AF", background: "#F9FAFB", padding: "4px 10px", borderRadius: 20, border: "1px solid #E5E7EB" }}>
+              {stats.total} OS total
+            </div>
+          </div>
+
+          {(() => {
+            // Apenas status de produção (exclui cancelada do destaque)
+            const colKeys = [
+              { key: "em_aberto",           label: "Em Aberto",      cor: "#0EA5E9" },
+              { key: "aguardando_aprovacao", label: "Aguard. Aprov.", cor: "#F97316" },
+              { key: "aprovada",            label: "Aprovada",        cor: "#10B981" },
+              { key: "em_producao",         label: "Em Produção",     cor: "#8B5CF6" },
+              { key: "em_instalacao",       label: "Em Instalação",   cor: "#F59E0B" },
+              { key: "concluida",           label: "Concluída",       cor: "#16A34A" },
+              { key: "cancelada",           label: "Cancelada",       cor: "#EF4444" },
+            ];
+
+            const maxVal = Math.max(...colKeys.map(c => stats[c.key] || 0), 1);
+            const chartH = 140; // altura útil das barras em px
+
+            return (
+              <div>
+                {/* Área das barras */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: chartH + 32, paddingBottom: 32, position: "relative" }}>
+                  {/* Linhas de grade horizontais */}
+                  {[0.25, 0.5, 0.75, 1].map(frac => (
+                    <div key={frac} style={{
+                      position: "absolute", left: 0, right: 0,
+                      bottom: 32 + frac * chartH,
+                      borderTop: "1px dashed #F3F4F6",
+                      zIndex: 0,
+                    }} />
+                  ))}
+
+                  {colKeys.map(({ key, label, cor }) => {
+                    const val   = stats[key] || 0;
+                    const pct   = val / maxVal;
+                    const barH  = Math.max(pct * chartH, val > 0 ? 6 : 2);
+                    const lines = label.split(" ");
+
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => val > 0 && abrirFiltro(`OS — ${label}`, o => o.status === key)}
+                        style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", cursor: val > 0 ? "pointer" : "default", position: "relative", zIndex: 1 }}
+                        title={`${label}: ${val} OS`}
+                      >
+                        {/* Valor acima da barra */}
+                        <div style={{
+                          fontSize: 13, fontWeight: 800, color: val > 0 ? cor : "#D1D5DB",
+                          marginBottom: 4, minHeight: 18, lineHeight: 1,
+                        }}>
+                          {val > 0 ? val : ""}
+                        </div>
+
+                        {/* Barra */}
+                        <div style={{
+                          width: "100%", height: barH,
+                          background: val > 0
+                            ? `linear-gradient(180deg, ${cor}CC 0%, ${cor} 100%)`
+                            : "#F3F4F6",
+                          borderRadius: "6px 6px 0 0",
+                          transition: "height 0.6s ease",
+                          boxShadow: val > 0 ? `0 -2px 8px ${cor}44` : "none",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}>
+                          {/* Brilho no topo da barra */}
+                          {val > 0 && (
+                            <div style={{
+                              position: "absolute", top: 0, left: 0, right: 0,
+                              height: 4, background: "rgba(255,255,255,0.4)",
+                              borderRadius: "6px 6px 0 0",
+                            }} />
+                          )}
+                        </div>
+
+                        {/* Linha de base */}
+                        <div style={{ width: "100%", height: 2, background: val > 0 ? cor : "#E5E7EB", borderRadius: 1 }} />
+
+                        {/* Label abaixo */}
+                        <div style={{ marginTop: 6, textAlign: "center" }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: val > 0 ? "#374151" : "#9CA3AF", lineHeight: 1.3, maxWidth: 52, wordBreak: "break-word" }}>{label}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Rodapé: taxa de conclusão */}
+                {stats.total > 0 && (
+                  <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: 14, display: "flex", gap: 20, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A" }} />
+                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                        Taxa de conclusão:&nbsp;
+                        <strong style={{ color: "#16A34A" }}>
+                          {((stats.concluida / stats.total) * 100).toFixed(0)}%
+                        </strong>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#8B5CF6" }} />
+                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                        Em produção ativa:&nbsp;
+                        <strong style={{ color: "#8B5CF6" }}>
+                          {stats.em_producao + (stats.em_instalacao || 0)} OS
+                        </strong>
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444" }} />
+                      <span style={{ fontSize: 12, color: "#6B7280" }}>
+                        Taxa de cancelamento:&nbsp;
+                        <strong style={{ color: "#EF4444" }}>
+                          {((stats.cancelada / stats.total) * 100).toFixed(0)}%
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        </div>{/* fim coluna direita */}
       </div>
 
       {/* Modais */}

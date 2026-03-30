@@ -48,9 +48,14 @@ function dateKey(d) {
 function OSPill({ os, onClick }) {
   const cfg = STATUS_CONFIG[os.status] || STATUS_CONFIG.aguardando;
   const atrasada = isAtrasada(os);
+  // Detecta se foi arrasto ou clique simples
+  const pillDrag = { startX: 0, startY: 0, moved: false };
   return (
     <div
-      onClick={e => { e.stopPropagation(); onClick(os); }}
+      data-pill="true"
+      onMouseDown={e => { pillDrag.startX = e.clientX; pillDrag.startY = e.clientY; pillDrag.moved = false; }}
+      onMouseMove={e => { if (Math.abs(e.clientX - pillDrag.startX) > 5 || Math.abs(e.clientY - pillDrag.startY) > 5) pillDrag.moved = true; }}
+      onClick={e => { e.stopPropagation(); if (!pillDrag.moved) onClick(os); }}
       title={`#${os.numero_os} — ${os.titulo}`}
       style={{
         background: atrasada ? "#FEE2E2" : cfg.bg,
@@ -59,7 +64,7 @@ function OSPill({ os, onClick }) {
         borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 600,
         whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         cursor: "pointer", marginBottom: 2, display: "block",
-        transition: "opacity 0.12s",
+        transition: "opacity 0.12s", userSelect: "none",
       }}
       onMouseEnter={e => e.currentTarget.style.opacity = "0.75"}
       onMouseLeave={e => e.currentTarget.style.opacity = "1"}
@@ -85,7 +90,7 @@ function DiaModal({ date, ordens, onClose, onSelectOS }) {
           </div>
           <button onClick={onClose} style={{ border: "none", background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 18, color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: "20px 20px 20px 20px", minHeight: 0 }}>
           {ordens.length === 0 ? (
             <p style={{ textAlign: "center", color: "#9CA3AF", padding: 24 }}>Nenhuma OS para este dia.</p>
           ) : ordens.map(os => {
@@ -229,77 +234,132 @@ function AgendaCalendario({ ano, mes, mapaOS, onDayClick, onSelectOS }) {
   const dias = getDiasDoMes(ano, mes);
   const hoje = new Date();
 
+  // ── Drag-to-scroll sem acionar clique ────────────────────────
+  const dragRef = useState(null)[1];
+  const dragState = { down: false, startX: 0, startY: 0, moved: false };
+
+  const onContainerMouseDown = (e) => {
+    // Ignora botões e pills
+    if (e.target.closest("button") || e.target.dataset.pill) return;
+    dragState.down  = true;
+    dragState.moved = false;
+    dragState.startX = e.clientX;
+    dragState.startY = e.clientY;
+    e.currentTarget._dragState = { ...dragState };
+  };
+  const onContainerMouseMove = (e) => {
+    const ds = e.currentTarget._dragState;
+    if (!ds?.down) return;
+    const dx = Math.abs(e.clientX - ds.startX);
+    const dy = Math.abs(e.clientY - ds.startY);
+    if (dx > 5 || dy > 5) {
+      ds.moved = true;
+      e.currentTarget.style.cursor = "grabbing";
+      e.currentTarget.scrollLeft -= (e.movementX || 0);
+      e.currentTarget.scrollTop  -= (e.movementY || 0);
+    }
+  };
+  const onContainerMouseUp = (e) => {
+    if (e.currentTarget._dragState) {
+      e.currentTarget._dragState.down = false;
+    }
+    e.currentTarget.style.cursor = "default";
+  };
+  const onContainerMouseLeave = (e) => {
+    if (e.currentTarget._dragState) e.currentTarget._dragState.down = false;
+    e.currentTarget.style.cursor = "default";
+  };
+
   return (
-    <div>
-      {/* Cabeçalho dias da semana */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
-        {DIAS_SEMANA_CURTO.map(d => (
-          <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#94A3B8", padding: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {d}
-          </div>
-        ))}
-      </div>
+    <div
+      onMouseDown={onContainerMouseDown}
+      onMouseMove={onContainerMouseMove}
+      onMouseUp={onContainerMouseUp}
+      onMouseLeave={onContainerMouseLeave}
+      style={{ overflowX: "auto", overflowY: "auto", cursor: "default", userSelect: "none", WebkitUserSelect: "none" }}
+    >
+      {/* Wrapper com largura mínima para scroll horizontal */}
+      <div style={{ minWidth: 700 }}>
+        {/* Cabeçalho dias da semana */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+          {DIAS_SEMANA_CURTO.map(d => (
+            <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#94A3B8", padding: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              {d}
+            </div>
+          ))}
+        </div>
 
-      {/* Grid de dias */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
-        {dias.map(({ date, outroMes }, idx) => {
-          const key = dateKey(date);
-          const osNoDia = mapaOS[key] || [];
-          const isToday = isSameDay(date, hoje);
-          const temOS = osNoDia.length > 0;
-          const temAtrasada = osNoDia.some(isAtrasada);
+        {/* Grid de dias */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+          {dias.map(({ date, outroMes }, idx) => {
+            const key = dateKey(date);
+            const osNoDia = mapaOS[key] || [];
+            const isToday = isSameDay(date, hoje);
+            const temOS = osNoDia.length > 0;
+            const temAtrasada = osNoDia.some(isAtrasada);
 
-          return (
-            <div
-              key={idx}
-              onClick={() => temOS && onDayClick(date, osNoDia)}
-              style={{
-                minHeight: 96, borderRadius: 12, padding: "8px 8px 6px",
-                background: isToday ? "#F5F3FF" : outroMes ? "#FAFAFA" : "#fff",
-                border: isToday ? "2px solid #7C3AED" : temAtrasada ? "1px solid #FCA5A5" : "1px solid #E5E7EB",
-                cursor: temOS ? "pointer" : "default",
-                transition: "all 0.12s",
-                opacity: outroMes ? 0.45 : 1,
-              }}
-              onMouseEnter={e => temOS && (e.currentTarget.style.boxShadow = "0 4px 16px rgba(124,58,237,0.14)")}
-              onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
-            >
-              {/* Número do dia */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{
-                  fontSize: 13, fontWeight: isToday ? 800 : 500,
-                  color: isToday ? "#7C3AED" : outroMes ? "#CBD5E1" : "#0F172A",
-                  width: 24, height: 24, borderRadius: "50%",
-                  background: isToday ? "#EDE9FE" : "transparent",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {date.getDate()}
-                </span>
-                {temOS && (
+            // Click só dispara se não houve drag
+            const handleClick = (e) => {
+              const ds = e.currentTarget.closest("[data-cal-container]")?._dragState
+                      || e.currentTarget.parentElement?._dragState;
+              if (ds?.moved) return; // era arrasto, ignora
+              if (temOS) onDayClick(date, osNoDia);
+            };
+
+            return (
+              <div
+                key={idx}
+                onClick={handleClick}
+                data-day={key}
+                style={{
+                  minHeight: 110, borderRadius: 12, padding: "8px 8px 6px",
+                  background: isToday ? "#F5F3FF" : outroMes ? "#FAFAFA" : "#fff",
+                  border: isToday ? "2px solid #7C3AED" : temAtrasada ? "1px solid #FCA5A5" : "1px solid #E5E7EB",
+                  cursor: "default",
+                  opacity: outroMes ? 0.45 : 1,
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Número do dia */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <span style={{
-                    fontSize: 10, fontWeight: 700, minWidth: 18, height: 18,
-                    background: temAtrasada ? "#EF4444" : "#7C3AED",
-                    color: "#fff", borderRadius: 20,
+                    fontSize: 13, fontWeight: isToday ? 800 : 500,
+                    color: isToday ? "#7C3AED" : outroMes ? "#CBD5E1" : "#0F172A",
+                    width: 24, height: 24, borderRadius: "50%",
+                    background: isToday ? "#EDE9FE" : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: "0 5px",
                   }}>
-                    {osNoDia.length}
+                    {date.getDate()}
                   </span>
+                  {temOS && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, minWidth: 18, height: 18,
+                      background: temAtrasada ? "#EF4444" : "#7C3AED",
+                      color: "#fff", borderRadius: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      padding: "0 5px",
+                    }}>
+                      {osNoDia.length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Pills das OS */}
+                {osNoDia.slice(0, 3).map(os => (
+                  <OSPill key={os.id} os={os} onClick={(o) => {
+                    // Só abre se não foi arrasto
+                    onSelectOS(o);
+                  }} />
+                ))}
+                {osNoDia.length > 3 && (
+                  <div style={{ fontSize: 10, color: "#7C3AED", fontWeight: 600, paddingLeft: 4 }}>
+                    +{osNoDia.length - 3} mais
+                  </div>
                 )}
               </div>
-
-              {/* Pills das OS */}
-              {osNoDia.slice(0, 2).map(os => (
-                <OSPill key={os.id} os={os} onClick={onSelectOS} />
-              ))}
-              {osNoDia.length > 2 && (
-                <div style={{ fontSize: 10, color: "#7C3AED", fontWeight: 600, paddingLeft: 4 }}>
-                  +{osNoDia.length - 2} mais
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -490,7 +550,7 @@ export default function Agenda() {
       </div>
 
       {/* Header de navegação do mês */}
-      <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #E5E7EB", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)" }}>
           <button onClick={() => navMes(-1)} style={{ border: "1px solid #DDD6FE", background: "#fff", borderRadius: 10, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#7C3AED" }}>
             <ChevronLeft size={18} />
