@@ -487,6 +487,7 @@ export function OSDetalhe({ os, onClose }) {
   const [showInstaladorModal, setShowInstaladorModal] = useState(false);
   const [funcionarios, setFuncionarios] = useState([]);
   const [instaladorId, setInstaladorId] = useState("");
+  const [horarioInstalacao, setHorarioInstalacao] = useState("");
 
   useEffect(() => {
     supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome")
@@ -515,7 +516,7 @@ export function OSDetalhe({ os, onClose }) {
   const confirmarInstalador = async () => {
     if (!instaladorId) { toast.error("⚠️ Selecione o responsável pela instalação."); return; }
     setShowInstaladorModal(false);
-    await executarSalvarStatus("em_instalacao", instaladorId);
+    await executarSalvarStatus("em_instalacao", instaladorId, horarioInstalacao);
   };
 
   const salvarStatus = async () => {
@@ -527,12 +528,13 @@ export function OSDetalhe({ os, onClose }) {
     await executarSalvarStatus(status, null);
   };
 
-  const executarSalvarStatus = async (novoStatus, responsavelInstalacaoId) => {
+  const executarSalvarStatus = async (novoStatus, responsavelInstalacaoId, horarioInst) => {
     setLoading(true);
     try {
       const extra = {};
       if (novoStatus === "concluida")    extra.data_conclusao = new Date().toISOString();
       if (responsavelInstalacaoId)       extra.responsavel_instalacao_id = responsavelInstalacaoId;
+      if (horarioInst)                   extra.horario_instalacao = horarioInst;
 
       const { error } = await supabase.from("ordens_servico")
         .update({ status: novoStatus, ...extra })
@@ -545,7 +547,8 @@ export function OSDetalhe({ os, onClose }) {
 
       const anterior = STATUS_CONFIG[os.status]?.label || os.status;
       const novo     = STATUS_CONFIG[novoStatus]?.label || novoStatus;
-      const descExtra = responsavelNome ? ` · Responsável: ${responsavelNome}` : "";
+      const descHorario = horarioInst ? ` · Horário: ${horarioInst}` : "";
+      const descExtra = (responsavelNome ? ` · Responsável: ${responsavelNome}` : "") + descHorario;
 
       await supabase.from("os_historico").insert({
         os_id: os.id, usuario_id: usuario?.id || null,
@@ -553,7 +556,7 @@ export function OSDetalhe({ os, onClose }) {
         descricao: `Status alterado: ${anterior} → ${novo}${descExtra}`,
         valor_anterior: os.status, valor_novo: novoStatus,
       });
-      toast.success(`✅ Status → "${novo}"${responsavelNome ? ` | Responsável: ${responsavelNome}` : ""}`);
+      toast.success(`✅ Status → "${novo}"${responsavelNome ? ` | Responsável: ${responsavelNome}` : ""}${horarioInst ? ` | Horário: ${horarioInst}` : ""}`);
       onClose();
     } catch (err) {
       toast.error("Erro: " + err.message);
@@ -570,6 +573,7 @@ export function OSDetalhe({ os, onClose }) {
     ["Lançado por",       os.usuarios?.funcionarios?.nome],
     ["Nº OS Externo",     os.numero_os_externo],
     ["Resp. Instalação",  os.resp_instalacao?.nome],
+    ["Horário Instalação", os.horario_instalacao ? new Date(os.horario_instalacao).toLocaleString("pt-BR") : null],
     ["Valor",             fmt(os.valor_total)],
   ].filter(([, v]) => v);
 
@@ -665,14 +669,24 @@ export function OSDetalhe({ os, onClose }) {
               <select
                 value={instaladorId}
                 onChange={e => setInstaladorId(e.target.value)}
-                style={{ ...inputStyle, width: "100%", marginBottom: 20 }}
+                style={{ ...inputStyle, width: "100%", marginBottom: 16 }}
               >
                 <option value="">Selecione o responsável...</option>
                 {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select>
+
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+                Horário previsto para instalação
+              </label>
+              <input
+                type="datetime-local"
+                value={horarioInstalacao}
+                onChange={e => setHorarioInstalacao(e.target.value)}
+                style={{ ...inputStyle, width: "100%", marginBottom: 20, boxSizing: "border-box" }}
+              />
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
                 <button
-                  onClick={() => { setShowInstaladorModal(false); setInstaladorId(""); }}
+                  onClick={() => { setShowInstaladorModal(false); setInstaladorId(""); setHorarioInstalacao(""); }}
                   style={{ ...btnSecondary }}
                 >
                   Cancelar

@@ -682,10 +682,10 @@ export default function Dashboard() {
 
         {/* Gráfico de colunas — Produção por status (clicável) */}
         <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #E5E7EB", padding: 24 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111827" }}>Painel de Produção</h3>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9CA3AF" }}>Volume de OS por status · clique para filtrar</p>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9CA3AF" }}>Volume de OS por status · clique para filtrar</p>
             </div>
             <div style={{ fontSize: 12, color: "#9CA3AF", background: "#F9FAFB", padding: "4px 10px", borderRadius: 20, border: "1px solid #E5E7EB" }}>
               {stats.total} OS total

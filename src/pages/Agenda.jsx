@@ -4,7 +4,7 @@ import { StatusBadge } from "../components/components";
 import { fmtDate, isAtrasada, STATUS_CONFIG, PRIORIDADE_CONFIG } from "../constants/constants";
 import {
   ChevronLeft, ChevronRight, CalendarDays, List,
-  Clock, AlertTriangle, AlertCircle, CheckCircle2, Calendar, PlayCircle,
+  Clock, AlertTriangle, AlertCircle, CheckCircle2, Calendar, PlayCircle, Wrench,
 } from "lucide-react";
 
 // ─── HELPERS ─────────────────────────────────────────────────
@@ -447,7 +447,7 @@ export default function Agenda() {
 
     const { data } = await supabase
       .from("ordens_servico")
-      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome))")
+      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome)), resp_instalacao:responsavel_instalacao_id(nome)")
       .gte("data_entrega_prevista", inicio)
       .lte("data_entrega_prevista", fim)
       .not("status", "in", '("cancelada")')
@@ -486,14 +486,17 @@ export default function Agenda() {
   const aprovadas  = ordens.filter(o => o.status === "aprovada").length;
   const emProducao = ordens.filter(o => o.status === "em_producao").length;
 
+  const emInstalacao = ordens.filter(o => o.status === "em_instalacao").length;
+
   const statCards = [
-    { label: "Entregas no mês",    value: total,      color: "#7C3AED", bg: "#F5F3FF", Icon: Calendar,      filtro: null },
-    { label: "Em Aberto",          value: emAberto,   color: "#0369A1", bg: "#F0F9FF", Icon: Clock,          filtro: () => setFiltroModal({ label: "Em Aberto", ordens: ordens.filter(o => o.status === "em_aberto") }) },
-    { label: "Aguard. Aprovação",  value: aguardAprov,color: "#EA580C", bg: "#FFF7ED", Icon: AlertCircle,    filtro: () => setFiltroModal({ label: "Aguardando Aprovação", ordens: ordens.filter(o => o.status === "aguardando_aprovacao") }) },
-    { label: "Aprovadas",          value: aprovadas,  color: "#065F46", bg: "#ECFDF5", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Aprovadas", ordens: ordens.filter(o => o.status === "aprovada") }) },
-    { label: "Em Produção",        value: emProducao, color: "#6D28D9", bg: "#EDE9FE", Icon: PlayCircle,     filtro: () => setFiltroModal({ label: "Em Produção", ordens: ordens.filter(o => o.status === "em_producao") }) },
-    { label: "Em Atraso",          value: atrasadas,  color: "#DC2626", bg: "#FEF2F2", Icon: AlertTriangle,  filtro: () => setFiltroModal({ label: "Em Atraso", ordens: ordens.filter(isAtrasada) }) },
-    { label: "Concluídas",         value: concluidas, color: "#16A34A", bg: "#DCFCE7", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Concluídas", ordens: ordens.filter(o => o.status === "concluida") }) },
+    { label: "Entregas no mês",    value: total,         color: "#7C3AED", bg: "#F5F3FF", Icon: Calendar,      filtro: null },
+    { label: "Em Aberto",          value: emAberto,      color: "#0369A1", bg: "#F0F9FF", Icon: Clock,          filtro: () => setFiltroModal({ label: "Em Aberto", ordens: ordens.filter(o => o.status === "em_aberto") }) },
+    { label: "Aguard. Aprovação",  value: aguardAprov,   color: "#EA580C", bg: "#FFF7ED", Icon: AlertCircle,    filtro: () => setFiltroModal({ label: "Aguardando Aprovação", ordens: ordens.filter(o => o.status === "aguardando_aprovacao") }) },
+    { label: "Aprovadas",          value: aprovadas,     color: "#065F46", bg: "#ECFDF5", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Aprovadas", ordens: ordens.filter(o => o.status === "aprovada") }) },
+    { label: "Em Produção",        value: emProducao,    color: "#6D28D9", bg: "#EDE9FE", Icon: PlayCircle,     filtro: () => setFiltroModal({ label: "Em Produção", ordens: ordens.filter(o => o.status === "em_producao") }) },
+    { label: "Em Instalação",      value: emInstalacao,  color: "#C2410C", bg: "#FFF7ED", Icon: Wrench,         filtro: () => setFiltroModal({ label: "Em Instalação", ordens: ordens.filter(o => o.status === "em_instalacao") }) },
+    { label: "Em Atraso",          value: atrasadas,     color: "#DC2626", bg: "#FEF2F2", Icon: AlertTriangle,  filtro: () => setFiltroModal({ label: "Em Atraso", ordens: ordens.filter(isAtrasada) }) },
+    { label: "Concluídas",         value: concluidas,    color: "#16A34A", bg: "#DCFCE7", Icon: CheckCircle2,   filtro: () => setFiltroModal({ label: "Concluídas", ordens: ordens.filter(o => o.status === "concluida") }) },
   ];
 
   return (

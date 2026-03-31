@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { StatusBadge } from "../components/components";
 import { fmt, fmtDate, STATUS_CONFIG, isAtrasada } from "../constants/constants";
-import { BarChart3, FileText, DollarSign, Users, Calendar, Filter } from "lucide-react";
+import { BarChart3, FileText, DollarSign, Users, Calendar, Filter, Wrench } from "lucide-react";
 import { OSDetalhe } from "./OrdensServico";
 import { Modal } from "../components/components";
 
@@ -49,7 +49,7 @@ export default function Relatorios() {
     const [{ data: osData }, { data: histData }] = await Promise.all([
       supabase
         .from("ordens_servico")
-        .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome))")
+        .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome)), resp_instalacao:responsavel_instalacao_id(nome)")
         .gte("data_lancamento", filtros.dataInicio + "T00:00:00")
         .lte("data_lancamento", filtros.dataFim + "T23:59:59")
         .order("data_lancamento", { ascending: false }),
@@ -80,11 +80,12 @@ export default function Relatorios() {
   };
 
   const abas = [
-    { key: "status",     label: "Por Status",    Icon: BarChart3  },
-    { key: "cliente",    label: "Por Cliente",   Icon: Users      },
-    { key: "tipo",       label: "Por Tipo OS",   Icon: FileText   },
-    { key: "financeiro", label: "Financeiro",    Icon: DollarSign },
-    { key: "lista",      label: "Lista Completa",Icon: Calendar   },
+    { key: "status",      label: "Por Status",    Icon: BarChart3  },
+    { key: "cliente",     label: "Por Cliente",   Icon: Users      },
+    { key: "tipo",        label: "Por Tipo OS",   Icon: FileText   },
+    { key: "financeiro",  label: "Financeiro",    Icon: DollarSign },
+    { key: "instalacoes", label: "Instalações",   Icon: Wrench     },
+    { key: "lista",       label: "Lista Completa",Icon: Calendar   },
   ];
 
   // ── Por Status ───────────────────────────────────────────────
@@ -283,15 +284,87 @@ export default function Relatorios() {
     </div>
   );
 
+  // ── Instalações ─────────────────────────────────────────────
+  const renderInstalacoes = () => {
+    const instaladas   = ordens.filter(o => o.status === "em_instalacao" || o.horario_instalacao);
+    const concluidas   = ordens.filter(o => o.status === "concluida" && o.horario_instalacao);
+    const emAndamento  = ordens.filter(o => o.status === "em_instalacao");
+
+    if (instaladas.length === 0) return (
+      <div style={{ textAlign: "center", padding: 48, color: "#9CA3AF" }}>
+        <Wrench size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+        <p style={{ margin: 0, fontSize: 15 }}>Nenhuma instalação no período.</p>
+      </div>
+    );
+
+    return (
+      <div>
+        {/* Resumo */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+          {[
+            { label: "Total de Instalações", value: instaladas.length,  color: "#C2410C", bg: "#FFF7ED" },
+            { label: "Em Andamento",         value: emAndamento.length,  color: "#F59E0B", bg: "#FFFBEB" },
+            { label: "Concluídas",           value: concluidas.length,   color: "#16A34A", bg: "#DCFCE7" },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} style={{ background: bg, borderRadius: 12, padding: "16px 18px" }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color, opacity: 0.8 }}>{label}</p>
+              <p style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 800, color }}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabela */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                {["Nº OS","Cliente","Título","Status","Responsável","Horário Previsto","Entrega","Valor"].map(h => (
+                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#6B7280", fontSize: 12, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {instaladas.length === 0
+                ? <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nenhuma instalação no período.</td></tr>
+                : instaladas.map((os, i) => (
+                  <tr key={os.id} style={{ borderTop: "1px solid #F3F4F6", background: i % 2 === 0 ? "#fff" : "#FAFAFA" }}>
+                    <td style={{ padding: "10px 14px", fontWeight: 700, color: "#7C3AED" }}>#{os.numero_os}</td>
+                    <td style={{ padding: "10px 14px" }}>{os.clientes?.nome || "—"}</td>
+                    <td style={{ padding: "10px 14px", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{os.titulo}</td>
+                    <td style={{ padding: "10px 14px" }}><StatusBadge status={os.status} /></td>
+                    <td style={{ padding: "10px 14px", fontWeight: 600, color: "#C2410C" }}>
+                      {os.resp_instalacao?.nome || <span style={{ color: "#9CA3AF", fontWeight: 400 }}>—</span>}
+                    </td>
+                    <td style={{ padding: "10px 14px", whiteSpace: "nowrap", color: "#374151" }}>
+                      {os.horario_instalacao
+                        ? new Date(os.horario_instalacao).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })
+                        : <span style={{ color: "#9CA3AF" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "10px 14px", whiteSpace: "nowrap", color: isAtrasada(os) ? "#DC2626" : "#374151", fontWeight: isAtrasada(os) ? 700 : 400 }}>
+                      {fmtDate(os.data_entrega_prevista)}
+                      {isAtrasada(os) && <span style={{ display: "block", fontSize: 10 }}>⚠ ATRASADA</span>}
+                    </td>
+                    <td style={{ padding: "10px 14px", fontWeight: 600 }}>{fmt(os.valor_total)}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderAba = () => {
     if (loading) return <p style={{ textAlign: "center", color: "#9CA3AF", padding: 40 }}>Carregando...</p>;
     switch (abaAtiva) {
-      case "status":     return renderStatus();
-      case "cliente":    return renderCliente();
-      case "tipo":       return renderTipo();
-      case "financeiro": return renderFinanceiro();
-      case "lista":      return renderLista();
-      default:           return null;
+      case "status":      return renderStatus();
+      case "cliente":     return renderCliente();
+      case "tipo":        return renderTipo();
+      case "financeiro":  return renderFinanceiro();
+      case "instalacoes": return renderInstalacoes();
+      case "lista":       return renderLista();
+      default:            return null;
     }
   };
 
