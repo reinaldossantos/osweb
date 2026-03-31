@@ -278,18 +278,18 @@ function AgendaCalendario({ ano, mes, mapaOS, onDayClick, onSelectOS }) {
       onMouseLeave={onContainerMouseLeave}
       style={{ overflowX: "auto", overflowY: "auto", cursor: "default", userSelect: "none", WebkitUserSelect: "none" }}
     >
-      {/* Wrapper com largura mínima para scroll horizontal */}
-      <div style={{ minWidth: 700 }}>
-        {/* Cabeçalho dias da semana */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+      {/* Wrapper com largura mínima — cabeçalho e grid JUNTOS para alinhar */}
+      <div style={{ minWidth: 840, display: "grid", gridTemplateRows: "auto 1fr" }}>
+        {/* Cabeçalho dias da semana — sticky no topo */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4, position: "sticky", top: 0, background: "#fff", zIndex: 10, paddingBottom: 2 }}>
           {DIAS_SEMANA_CURTO.map(d => (
-            <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#94A3B8", padding: "8px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>
+            <div key={d} style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "#94A3B8", padding: "8px 0", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid #EDE9FE" }}>
               {d}
             </div>
           ))}
         </div>
 
-        {/* Grid de dias */}
+        {/* Grid de dias — mesma coluna do cabeçalho */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
           {dias.map(({ date, outroMes }, idx) => {
             const key = dateKey(date);

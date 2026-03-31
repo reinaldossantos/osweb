@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Modal, FormField, StatusBadge, PrioridadeBadge } from "../components/components";
 import { STATUS_CONFIG, PRIORIDADE_CONFIG, fmt, fmtDate, fmtDateTime, isAtrasada, isHoje, inputStyle, btnPrimary, btnSecondary, btnDanger } from "../constants/constants";
 import { Plus, Search, Eye, Edit2, Layers, CheckSquare, Square, Trash2 } from "lucide-react";
+import { ESTADOS } from "../constants/estadosCidades";
 
 // ─── HELPER ──────────────────────────────────────────────────
 const uuidOuNull = (v) => (v && String(v).trim() !== "" ? v : null);
@@ -17,7 +18,8 @@ export function NovaOS({ onSaved }) {
     cliente_id: "", tipo_os_id: "", servico_id: "", forma_pagamento_id: "",
     status: "em_aberto", prioridade: "normal",
     data_entrega_prevista: "", valor_total: "",
-    numero_os_externo: "", cidade: "",
+    numero_os_externo: "", cidade: "", estado: "",
+    desconto_valor: "", desconto_percentual: "",
   });
   const [touched, setTouched] = useState({});
   const [etapasDisponiveis, setEtapasDisponiveis] = useState([]);
@@ -97,6 +99,9 @@ export function NovaOS({ onSaved }) {
       observacoes_internas: form.observacoes_internas || null,
       numero_os_externo:    form.numero_os_externo?.trim() || null,
       cidade:               form.cidade?.trim() || null,
+      estado:               form.estado?.trim() || null,
+      desconto_valor:       parseFloat(form.desconto_valor) || 0,
+      desconto_percentual:  parseFloat(form.desconto_percentual) || 0,
       cliente_id:           form.cliente_id,
       tipo_os_id:           uuidOuNull(form.tipo_os_id),
       servico_id:           uuidOuNull(form.servico_id),
@@ -174,9 +179,22 @@ export function NovaOS({ onSaved }) {
             </select>
           </FormField>
 
-          <FormField label="Cidade">
-            <input style={inputStyle} value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} placeholder="Cidade do cliente / da entrega" />
-          </FormField>
+          <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
+            <FormField label="Estado">
+              <select style={sel} value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value, cidade: "" }))}>
+                <option value="">UF...</option>
+                {ESTADOS.map(e => <option key={e.uf} value={e.uf}>{e.uf} — {e.nome}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Cidade">
+              <select style={sel} value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))}>
+                <option value="">Selecione a cidade...</option>
+                {(ESTADOS.find(e => e.uf === form.estado)?.cidades || []).map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <FormField label="Tipo de O.S.">
@@ -295,12 +313,44 @@ export function NovaOS({ onSaved }) {
             <Plus size={13} /> Adicionar Item
           </button>
 
+          {/* Campos de desconto */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <FormField label="Desconto em R$">
+              <input
+                type="number"
+                style={{ ...inputStyle, borderColor: "#FDE68A" }}
+                value={form.desconto_valor}
+                onChange={e => {
+                  const dv = parseFloat(e.target.value) || 0;
+                  const vb = parseFloat(form._valor_bruto || form.valor_total) || 0;
+                  const pct = vb > 0 ? ((dv / vb) * 100).toFixed(2) : "";
+                  setForm(f => ({ ...f, desconto_valor: e.target.value, desconto_percentual: pct, _valor_bruto: vb || f._valor_bruto, valor_total: Math.max(0, vb - dv).toFixed(2) }));
+                }}
+                placeholder="0,00" min="0" step="0.01"
+              />
+            </FormField>
+            <FormField label="Desconto em %">
+              <input
+                type="number"
+                style={{ ...inputStyle, borderColor: "#FDE68A" }}
+                value={form.desconto_percentual}
+                onChange={e => {
+                  const pct = parseFloat(e.target.value) || 0;
+                  const vb = parseFloat(form._valor_bruto || form.valor_total) || 0;
+                  const dv = ((pct / 100) * vb).toFixed(2);
+                  setForm(f => ({ ...f, desconto_percentual: e.target.value, desconto_valor: dv, _valor_bruto: vb || f._valor_bruto, valor_total: Math.max(0, vb - parseFloat(dv)).toFixed(2) }));
+                }}
+                placeholder="0,00" min="0" max="100" step="0.01"
+              />
+            </FormField>
+          </div>
+
           <FormField label="Valor Total (R$)">
             <input
               type="number"
-              style={{ ...inputStyle, fontWeight: 700, fontSize: 15 }}
+              style={{ ...inputStyle, fontWeight: 700, fontSize: 15, background: "#F0FDF4", borderColor: "#86EFAC" }}
               value={form.valor_total}
-              onChange={e => setForm(f => ({ ...f, valor_total: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, valor_total: e.target.value, _valor_bruto: e.target.value, desconto_valor: "", desconto_percentual: "" }))}
               placeholder="0,00" min="0" step="0.01"
             />
           </FormField>
@@ -325,6 +375,10 @@ export function EditarOS({ os, onSaved, onClose }) {
     observacoes_internas: os.observacoes_internas || "",
     numero_os_externo:    os.numero_os_externo    || "",
     cidade:               os.cidade               || "",
+    estado:               os.estado               || "",
+    desconto_valor:       os.desconto_valor       || "",
+    desconto_percentual:  os.desconto_percentual  || "",
+    _valor_bruto:         os.valor_total          || "",
     cliente_id:           os.cliente_id           || "",
     tipo_os_id:           os.tipo_os_id           || "",
     servico_id:           os.servico_id           || "",
@@ -360,6 +414,9 @@ export function EditarOS({ os, onSaved, onClose }) {
       observacoes_internas: form.observacoes_internas || null,
       numero_os_externo:    form.numero_os_externo?.trim() || null,
       cidade:               form.cidade?.trim() || null,
+      estado:               form.estado?.trim() || null,
+      desconto_valor:       parseFloat(form.desconto_valor) || 0,
+      desconto_percentual:  parseFloat(form.desconto_percentual) || 0,
       cliente_id:           form.cliente_id,
       tipo_os_id:           uuidOuNull(form.tipo_os_id),
       servico_id:           uuidOuNull(form.servico_id),
@@ -410,9 +467,20 @@ export function EditarOS({ os, onSaved, onClose }) {
               {refs.clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </FormField>
-          <FormField label="Cidade">
-            <input style={inputStyle} value={form.cidade} onChange={e => setForm(f => ({...f, cidade: e.target.value}))} placeholder="Cidade" />
-          </FormField>
+          <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 12 }}>
+            <FormField label="Estado">
+              <select style={sel} value={form.estado} onChange={e => setForm(f => ({...f, estado: e.target.value, cidade:""}))}>
+                <option value="">UF...</option>
+                {ESTADOS.map(e => <option key={e.uf} value={e.uf}>{e.uf} — {e.nome}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Cidade">
+              <select style={sel} value={form.cidade} onChange={e => setForm(f => ({...f, cidade: e.target.value}))}>
+                <option value="">Selecione...</option>
+                {(ESTADOS.find(e => e.uf === form.estado)?.cidades || []).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </FormField>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <FormField label="Tipo de O.S.">
               <select style={sel} value={form.tipo_os_id} onChange={e => setForm(f => ({...f, tipo_os_id: e.target.value}))}>
@@ -569,12 +637,13 @@ export function OSDetalhe({ os, onClose }) {
     ["Lançamento",        fmtDateTime(os.data_lancamento)],
     ["Entrega",           fmtDate(os.data_entrega_prevista)],
     ["Cliente",           os.clientes?.nome],
-    ["Cidade",            os.cidade],
+    ["Estado/Cidade",     [os.estado, os.cidade].filter(Boolean).join(" — ") || null],
     ["Lançado por",       os.usuarios?.funcionarios?.nome],
     ["Nº OS Externo",     os.numero_os_externo],
     ["Resp. Instalação",  os.resp_instalacao?.nome],
     ["Horário Instalação", os.horario_instalacao ? new Date(os.horario_instalacao).toLocaleString("pt-BR") : null],
-    ["Valor",             fmt(os.valor_total)],
+    ["Desconto",          (os.desconto_valor > 0 || os.desconto_percentual > 0) ? `${fmt(os.desconto_valor)} (${os.desconto_percentual}%)` : null],
+    ["Valor Total",       fmt(os.valor_total)],
   ].filter(([, v]) => v);
 
   return (
@@ -598,6 +667,23 @@ export function OSDetalhe({ os, onClose }) {
             <button onClick={salvarStatus} disabled={loading} style={btnPrimary}>{loading ? "..." : "Salvar"}</button>
           </div>
           <div style={{ marginBottom: 12 }}><StatusBadge status={os.status} size="lg" /></div>
+          {/* Mostra responsável pela instalação se status for em_instalacao */}
+          {os.status === "em_instalacao" && (os.resp_instalacao?.nome || os.horario_instalacao) && (
+            <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#C2410C", textTransform: "uppercase", marginBottom: 6 }}>🔧 Dados da Instalação</div>
+              {os.resp_instalacao?.nome && (
+                <div style={{ fontSize: 13, color: "#374151", marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600 }}>Responsável:</span> {os.resp_instalacao.nome}
+                </div>
+              )}
+              {os.horario_instalacao && (
+                <div style={{ fontSize: 13, color: "#374151" }}>
+                  <span style={{ fontWeight: 600 }}>Horário previsto:</span>{" "}
+                  {new Date(os.horario_instalacao).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" })}
+                </div>
+              )}
+            </div>
+          )}
           {os.descricao && (
             <div style={{ background: "#F9FAFB", borderRadius: 8, padding: 12 }}>
               <p style={{ margin: 0, fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{os.descricao}</p>
@@ -722,7 +808,7 @@ export function OrdensServico() {
     setLoading(true);
     const { data } = await supabase
       .from("ordens_servico")
-      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome)), resp_instalacao:responsavel_instalacao_id(nome)")
+      .select("*, clientes(nome), tipos_os(codigo, nome), usuarios!usuario_lancamento_id(funcionarios(nome)), resp_instalacao:responsavel_instalacao_id(nome), horario_instalacao")
       .order("created_at", { ascending: false });
     setOrdens(data || []);
     setLoading(false);
@@ -796,44 +882,51 @@ export function OrdensServico() {
         <div
           ref={el => {
             if (!el) return;
-            let isDown = false, startX, startY, scrollLeft, scrollTop;
+            const ds = { down: false, moved: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 };
+            el._ds = ds;
 
-            // ── Mouse (desktop) ──────────────────────────────
+            // ── Mouse ────────────────────────────────────────
             el.onmousedown = e => {
-              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" ||
-                  e.target.closest("button") || e.target.closest("select")) return;
-              isDown = true; el.style.cursor = "grabbing";
-              startX = e.pageX - el.offsetLeft; startY = e.pageY - el.offsetTop;
-              scrollLeft = el.scrollLeft; scrollTop = el.scrollTop;
+              if (e.target.closest("button") || e.target.closest("select")) return;
+              ds.down = true; ds.moved = false;
+              ds.startX = e.clientX; ds.startY = e.clientY;
+              ds.scrollLeft = el.scrollLeft; ds.scrollTop = el.scrollTop;
+              el.style.cursor = "grab";
             };
-            el.onmouseleave = () => { isDown = false; el.style.cursor = "default"; };
-            el.onmouseup    = () => { isDown = false; el.style.cursor = "default"; };
+            el.onmouseleave = () => { ds.down = false; el.style.cursor = "default"; };
+            el.onmouseup    = () => { ds.down = false; el.style.cursor = "default"; };
             el.onmousemove  = e => {
-              if (!isDown) return;
-              e.preventDefault();
-              el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
-              el.scrollTop  = scrollTop  - (e.pageY - el.offsetTop  - startY);
+              if (!ds.down) return;
+              const dx = Math.abs(e.clientX - ds.startX);
+              const dy = Math.abs(e.clientY - ds.startY);
+              if (dx > 4 || dy > 4) {
+                ds.moved = true;
+                el.style.cursor = "grabbing";
+                el.scrollLeft = ds.scrollLeft - (e.clientX - ds.startX);
+                el.scrollTop  = ds.scrollTop  - (e.clientY - ds.startY);
+              }
             };
 
-            // ── Touch (TV touchscreen / tablet / mobile) ─────
+            // ── Touch ────────────────────────────────────────
             el.ontouchstart = e => {
-              if (e.target.tagName === "BUTTON" || e.target.tagName === "SELECT" ||
-                  e.target.closest("button") || e.target.closest("select")) return;
+              if (e.target.closest("button") || e.target.closest("select")) return;
               const t = e.touches[0];
-              isDown = true;
-              startX = t.pageX - el.offsetLeft; startY = t.pageY - el.offsetTop;
-              scrollLeft = el.scrollLeft; scrollTop = el.scrollTop;
+              ds.down = true; ds.moved = false;
+              ds.startX = t.clientX; ds.startY = t.clientY;
+              ds.scrollLeft = el.scrollLeft; ds.scrollTop = el.scrollTop;
             };
-            el.ontouchend  = () => { isDown = false; };
+            el.ontouchend  = () => { ds.down = false; };
             el.ontouchmove = e => {
-              if (!isDown) return;
-              e.preventDefault();
+              if (!ds.down) return;
               const t = e.touches[0];
-              el.scrollLeft = scrollLeft - (t.pageX - el.offsetLeft - startX);
-              el.scrollTop  = scrollTop  - (t.pageY - el.offsetTop  - startY);
+              if (Math.abs(t.clientX - ds.startX) > 4 || Math.abs(t.clientY - ds.startY) > 4) {
+                ds.moved = true;
+                el.scrollLeft = ds.scrollLeft - (t.clientX - ds.startX);
+                el.scrollTop  = ds.scrollTop  - (t.clientY - ds.startY);
+              }
             };
           }}
-          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "65vh", cursor: "default", touchAction: "pan-x pan-y" }}
+          data-scroll-container="true" style={{ overflowX: "auto", overflowY: "auto", maxHeight: "65vh", cursor: "default", touchAction: "pan-x pan-y" }}
         >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
@@ -851,9 +944,14 @@ export function OrdensServico() {
                 : filtradas.map((os, i) => (
                   <tr
                     key={os.id}
-                    onClick={() => setSelectedOS(os)}
+                    onClick={e => {
+                      // Só abre se não houve arrasto no container pai
+                      const container = e.currentTarget.closest("[data-scroll-container]");
+                      if (container?._ds?.moved) return;
+                      setSelectedOS(os);
+                    }}
                     style={{ borderTop: "1px solid #F3F4F6", background: isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor: "pointer", transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#F5F3FF"}
+                    onMouseEnter={e => { if (!e.currentTarget.closest("[data-scroll-container]")?._ds?.moved) e.currentTarget.style.background = "#F5F3FF"; }}
                     onMouseLeave={e => e.currentTarget.style.background = isAtrasada(os) ? "#FFF7F7" : i % 2 === 0 ? "#fff" : "#FAFAFA"}
                   >
                     <td style={{ padding: "11px 13px", fontWeight: 700, color: "#7C3AED" }}>

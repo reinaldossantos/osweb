@@ -26,11 +26,6 @@ function Sidebar({ page, setPage, sidebarOpen, usuario, signOut, isAdmin }) {
       display: "flex",
       flexDirection: "column",
       height: "100vh",
-      position: "sticky",
-      top: 0,
-      transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-      transition: "transform 0.2s",
-      zIndex: 100,
       overflow: "hidden",
     }}>
       {/* Logo */}
@@ -151,20 +146,33 @@ function AppContent() {
     }
   };
 
-  return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#F1F5F9" }}>
+  const SIDEBAR_W = 252;
 
-      {/* Sidebar — sticky, não rola com o conteúdo */}
-      {sidebarOpen && (
+  return (
+    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden", background: "#F1F5F9", position: "relative" }}>
+
+      {/* Sidebar — posição fixa, não empurra o conteúdo */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 200,
+        width: SIDEBAR_W,
+        transform: sidebarOpen ? "translateX(0)" : `translateX(-${SIDEBAR_W}px)`,
+        transition: "transform 0.2s ease",
+        boxShadow: sidebarOpen ? "4px 0 20px rgba(0,0,0,0.15)" : "none",
+      }}>
         <Sidebar
           page={page} setPage={setPage}
           sidebarOpen={sidebarOpen}
           usuario={usuario} signOut={signOut} isAdmin={isAdmin}
         />
-      )}
+      </div>
 
-      {/* Main — coluna direita, rola independente */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+      {/* Main — sempre ocupa 100% da tela, margem esquerda quando sidebar aberta */}
+      <div style={{
+        flex: 1, display: "flex", flexDirection: "column",
+        width: "100%", overflow: "hidden",
+        marginLeft: sidebarOpen ? SIDEBAR_W : 0,
+        transition: "margin-left 0.2s ease",
+      }}>
 
         {/* Topbar */}
         <header style={{
