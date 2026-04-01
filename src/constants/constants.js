@@ -2,14 +2,19 @@ import {
   LayoutDashboard, FileText, Plus, Users, Briefcase,
   CreditCard, Tag, UserPlus, Package, Layers, Building2,
   Clock, CheckCircle2, XCircle, AlertCircle, PlayCircle, BarChart3, CalendarDays, Wrench, ShieldAlert,
+  Factory, Truck, Scissors, RotateCcw,
 } from "lucide-react";
 
 export const STATUS_CONFIG = {
   em_aberto:            { label: "Em Aberto",          Icon: Clock,        bg: "#F0F9FF", text: "#0369A1", border: "#7DD3FC" },
   aguardando_aprovacao: { label: "Aguard. Aprovação",   Icon: AlertCircle,  bg: "#FED7AA", text: "#9A3412", border: "#FB923C" },
   aprovada:             { label: "Aprovada",            Icon: CheckCircle2, bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" },
-  em_producao:          { label: "Em Produção",         Icon: PlayCircle,   bg: "#EDE9FE", text: "#6D28D9", border: "#DDD6FE" },
+  producao_interna:     { label: "Prod. Interna",       Icon: Factory,      bg: "#EDE9FE", text: "#5B21B6", border: "#C4B5FD" },
+  producao_externa:     { label: "Prod. Externa",       Icon: Truck,        bg: "#E0F2FE", text: "#0369A1", border: "#7DD3FC" },
+  em_producao:          { label: "Em Produção",         Icon: PlayCircle,   bg: "#F5F3FF", text: "#6D28D9", border: "#DDD6FE" },
+  acabamento:           { label: "Acabamento",          Icon: Scissors,     bg: "#FDF4FF", text: "#7E22CE", border: "#E9D5FF" },
   em_instalacao:        { label: "Em Instalação",       Icon: Wrench,       bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
+  retrabalho:           { label: "Retrabalho",          Icon: RotateCcw,    bg: "#FFF1F2", text: "#BE123C", border: "#FDA4AF" },
   concluida:            { label: "Concluída",           Icon: CheckCircle2, bg: "#DCFCE7", text: "#166534", border: "#86EFAC" },
   cancelada:            { label: "Cancelada",           Icon: XCircle,      bg: "#FEE2E2", text: "#991B1B", border: "#FCA5A5" },
 };
@@ -55,7 +60,7 @@ export const fmtDateTime = (d) => {
 };
 
 export const isAtrasada = (os) => {
-  if (os.status === "concluida" || os.status === "cancelada") return false;
+  if (["concluida", "cancelada"].includes(os.status)) return false;
   if (!os.data_entrega_prevista) return false;
   return new Date(os.data_entrega_prevista) < new Date();
 };

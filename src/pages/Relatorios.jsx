@@ -80,12 +80,13 @@ export default function Relatorios() {
   };
 
   const abas = [
-    { key: "status",      label: "Por Status",    Icon: BarChart3  },
-    { key: "cliente",     label: "Por Cliente",   Icon: Users      },
-    { key: "tipo",        label: "Por Tipo OS",   Icon: FileText   },
-    { key: "financeiro",  label: "Financeiro",    Icon: DollarSign },
-    { key: "instalacoes", label: "Instalações",   Icon: Wrench     },
-    { key: "lista",       label: "Lista Completa",Icon: Calendar   },
+    { key: "status",      label: "Por Status",       Icon: BarChart3  },
+    { key: "cliente",     label: "Por Cliente",      Icon: Users      },
+    { key: "tipo",        label: "Por Tipo OS",      Icon: FileText   },
+    { key: "financeiro",  label: "Financeiro",       Icon: DollarSign },
+    { key: "colaborador", label: "Por Colaborador",  Icon: Users      },
+    { key: "instalacoes", label: "Instalações",      Icon: Wrench     },
+    { key: "lista",       label: "Lista Completa",   Icon: Calendar   },
   ];
 
   // ── Por Status ───────────────────────────────────────────────
@@ -355,6 +356,72 @@ export default function Relatorios() {
     );
   };
 
+  // ── Produção por Colaborador ─────────────────────────────────
+  const renderColaborador = () => {
+    // Group OS by who launched them (usuario_lancamento)
+    const lancadasPor = {};
+    ordens.forEach(os => {
+      const nome = os.usuarios?.funcionarios?.nome || "Não identificado";
+      if (!lancadasPor[nome]) lancadasPor[nome] = { lancadas: 0, concluidas: 0, retrabalhos: 0, valor: 0, osIds: [] };
+      lancadasPor[nome].lancadas++;
+      if (os.status === "concluida")   lancadasPor[nome].concluidas++;
+      if (os.status === "retrabalho" || os.tem_retrabalho) lancadasPor[nome].retrabalhos++;
+      lancadasPor[nome].valor += os.valor_total || 0;
+    });
+
+    const sorted = Object.entries(lancadasPor).sort((a, b) => b[1].lancadas - a[1].lancadas);
+
+    if (sorted.length === 0) return (
+      <p style={{ textAlign:"center", color:"#9CA3AF", padding:40 }}>Nenhum dado no período.</p>
+    );
+
+    return (
+      <div>
+        <div style={{ marginBottom:16, background:"#F5F3FF", borderRadius:10, padding:"12px 16px", fontSize:13, color:"#5B21B6" }}>
+          📊 Produção individual dos colaboradores com base nas OS lançadas no período selecionado.
+        </div>
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+            <thead>
+              <tr style={{ background:"#F9FAFB", borderBottom:"1px solid #E5E7EB" }}>
+                {["Colaborador","OS Lançadas","OS Concluídas","Retrabalhos","Taxa Conclusão","Valor Total"].map(h => (
+                  <th key={h} style={{ padding:"10px 16px", textAlign:"left", fontWeight:600, color:"#6B7280", fontSize:12, whiteSpace:"nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(([nome, d], i) => (
+                <tr key={nome} style={{ borderTop:"1px solid #F3F4F6", background: i%2===0?"#fff":"#FAFAFA" }}>
+                  <td style={{ padding:"12px 16px", fontWeight:700, color:"#0F172A" }}>{nome}</td>
+                  <td style={{ padding:"12px 16px" }}>
+                    <span style={{ background:"#F5F3FF", color:"#7C3AED", padding:"2px 10px", borderRadius:20, fontWeight:700 }}>{d.lancadas}</span>
+                  </td>
+                  <td style={{ padding:"12px 16px" }}>
+                    <span style={{ background:"#DCFCE7", color:"#166534", padding:"2px 10px", borderRadius:20, fontWeight:700 }}>{d.concluidas}</span>
+                  </td>
+                  <td style={{ padding:"12px 16px" }}>
+                    <span style={{ background: d.retrabalhos > 0 ? "#FFF1F2" : "#F3F4F6", color: d.retrabalhos > 0 ? "#BE123C" : "#9CA3AF", padding:"2px 10px", borderRadius:20, fontWeight:700 }}>{d.retrabalhos}</span>
+                  </td>
+                  <td style={{ padding:"12px 16px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <div style={{ flex:1, height:6, background:"#F3F4F6", borderRadius:99 }}>
+                        <div style={{ height:"100%", width:`${d.lancadas > 0 ? (d.concluidas/d.lancadas*100).toFixed(0) : 0}%`, background:"#7C3AED", borderRadius:99 }} />
+                      </div>
+                      <span style={{ fontSize:12, color:"#374151", minWidth:30 }}>
+                        {d.lancadas > 0 ? (d.concluidas/d.lancadas*100).toFixed(0) : 0}%
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding:"12px 16px", fontWeight:600 }}>{fmt(d.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   const renderAba = () => {
     if (loading) return <p style={{ textAlign: "center", color: "#9CA3AF", padding: 40 }}>Carregando...</p>;
     switch (abaAtiva) {
@@ -362,6 +429,7 @@ export default function Relatorios() {
       case "cliente":     return renderCliente();
       case "tipo":        return renderTipo();
       case "financeiro":  return renderFinanceiro();
+      case "colaborador": return renderColaborador();
       case "instalacoes": return renderInstalacoes();
       case "lista":       return renderLista();
       default:            return null;

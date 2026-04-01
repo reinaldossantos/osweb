@@ -7,7 +7,7 @@ import { OSDetalhe } from "./OrdensServico";
 import {
   FileText, PlayCircle, Clock, AlertTriangle, AlertCircle, Calendar,
   TrendingUp, CheckCircle2, XCircle, DollarSign, BarChart3,
-  RefreshCw, Wrench, Tv, X, Maximize2,
+  RefreshCw, Wrench, Factory, Truck, Scissors, RotateCcw, Tv, X, Maximize2,
 } from "lucide-react";
 
 // ─── CSS GLOBAL (keyframes) ───────────────────────────────────
@@ -378,6 +378,10 @@ export default function Dashboard() {
       concluida:            lista.filter(o => o.status === "concluida").length,
       cancelada:            lista.filter(o => o.status === "cancelada").length,
       atrasadas:            lista.filter(isAtrasada).length,
+      producao_interna:     lista.filter(o => o.status === "producao_interna").length,
+      producao_externa:     lista.filter(o => o.status === "producao_externa").length,
+      acabamento:           lista.filter(o => o.status === "acabamento").length,
+      retrabalho:           lista.filter(o => o.status === "retrabalho").length,
       hoje:                 lista.filter(o => isHoje(o) && !["concluida","cancelada"].includes(o.status)).length,
       lancadasHoje:         lista.filter(o => o.data_lancamento?.startsWith(hoje)).length,
       valorTotal:           lista.reduce((s,o) => s+(o.valor_total||0), 0),
@@ -405,6 +409,12 @@ export default function Dashboard() {
       filtro:()=>abrirFiltro("OS Aprovadas", o=>o.status==="aprovada") },
     { _key:"em_prod",  label:"Em Produção",        value:stats.em_producao,          Icon:PlayCircle,    bg:"#8B5CF6", icon:"#fff", color:"#fff", effect:null,
       filtro:()=>abrirFiltro("OS Em Produção", o=>o.status==="em_producao") },
+    { _key:"prod_int", label:"Prod. Interna",      value:stats.producao_interna,      Icon:Factory,       bg:"#7C3AED", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Produção Interna", o=>o.status==="producao_interna") },
+    { _key:"prod_ext", label:"Prod. Externa",      value:stats.producao_externa,      Icon:Truck,         bg:"#0EA5E9", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS Produção Externa", o=>o.status==="producao_externa") },
+    { _key:"acabam",   label:"Acabamento",         value:stats.acabamento,            Icon:Scissors,      bg:"#A21CAF", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS em Acabamento", o=>o.status==="acabamento") },
     { _key:"em_inst",  label:"Em Instalação",      value:stats.em_instalacao,        Icon:Wrench,        bg:"#F59E0B", icon:"#fff", color:"#fff", effect:null,
       filtro:()=>abrirFiltro("OS Em Instalação", o=>o.status==="em_instalacao") },
     { _key:"atraso",   label:"Em Atraso",          value:stats.atrasadas,            Icon:AlertTriangle, bg:"#EF4444", icon:"#fff", color:"#fff", effect:"blink-red",
@@ -415,6 +425,8 @@ export default function Dashboard() {
       filtro:()=>abrirFiltro("OS Lançadas Hoje", o=>o.data_lancamento?.startsWith(hoje)) },
     { _key:"concl",    label:"Concluídas",         value:stats.concluida,            Icon:CheckCircle2,  bg:"#16A34A", icon:"#fff", color:"#fff", effect:null,
       filtro:()=>abrirFiltro("OS Concluídas", o=>o.status==="concluida") },
+    { _key:"retrab",   label:"Retrabalho",         value:stats.retrabalho,           Icon:RotateCcw,     bg:"#E11D48", icon:"#fff", color:"#fff", effect:null,
+      filtro:()=>abrirFiltro("OS em Retrabalho", o=>o.status==="retrabalho") },
     { _key:"cancel",   label:"Canceladas",         value:stats.cancelada,            Icon:XCircle,       bg:"#F3F4F6", icon:"#9CA3AF", color:"#6B7280", effect:null,
       filtro:()=>abrirFiltro("OS Canceladas", o=>o.status==="cancelada") },
   ];
@@ -437,7 +449,11 @@ export default function Dashboard() {
       c._key === "aguard"   ? o => o.status==="aguardando_aprovacao" :
       c._key === "aprovada" ? o => o.status==="aprovada" :
       c._key === "em_prod"  ? o => o.status==="em_producao" :
+      c._key === "prod_int" ? o => o.status==="producao_interna" :
+      c._key === "prod_ext" ? o => o.status==="producao_externa" :
+      c._key === "acabam"   ? o => o.status==="acabamento" :
       c._key === "em_inst"  ? o => o.status==="em_instalacao" :
+      c._key === "retrab"   ? o => o.status==="retrabalho" :
       c._key === "atraso"   ? isAtrasada :
       c._key === "hoje"     ? o => isHoje(o)&&!["concluida","cancelada"].includes(o.status) :
       c._key === "lancadas" ? o => o.data_lancamento?.startsWith(hoje) :

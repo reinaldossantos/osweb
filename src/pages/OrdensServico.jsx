@@ -24,20 +24,22 @@ export function NovaOS({ onSaved }) {
   const [touched, setTouched] = useState({});
   const [etapasDisponiveis, setEtapasDisponiveis] = useState([]);
   const [etapasSelecionadas, setEtapasSelecionadas] = useState([]);
+  const [etapasResponsaveis, setEtapasResponsaveis] = useState({});
   const [itens, setItens] = useState([]);
-  const [refs, setRefs] = useState({ clientes: [], tipos: [], servicos: [], pagamentos: [] });
+  const [refs, setRefs] = useState({ clientes: [], tipos: [], servicos: [], pagamentos: [], funcionarios: [] });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { loadRefs(); }, []);
 
   const loadRefs = async () => {
-    const [{ data: clientes }, { data: tipos }, { data: servicos }, { data: pagamentos }] = await Promise.all([
+    const [{ data: clientes }, { data: tipos }, { data: servicos }, { data: pagamentos }, { data: funcs }] = await Promise.all([
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
       supabase.from("tipos_os").select("id, codigo, nome").eq("ativo", true).order("codigo"),
       supabase.from("servicos").select("id, nome, valor_base").eq("ativo", true).order("nome"),
       supabase.from("formas_pagamento").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome"),
     ]);
-    setRefs({ clientes: clientes || [], tipos: tipos || [], servicos: servicos || [], pagamentos: pagamentos || [] });
+    setRefs({ clientes: clientes || [], tipos: tipos || [], servicos: servicos || [], pagamentos: pagamentos || [], funcionarios: funcs || [] });
   };
 
   const handleServicoChange = async (servicoId) => {
@@ -120,7 +122,10 @@ export function NovaOS({ onSaved }) {
 
       if (etapasSelecionadas.length > 0) {
         const ep = etapasDisponiveis.filter(e => etapasSelecionadas.includes(e.id))
-          .map(e => ({ os_id: os.id, etapa_id: e.id, nome_etapa: e.nome, ordem: e.ordem }));
+          .map(e => ({
+            os_id: os.id, etapa_id: e.id, nome_etapa: e.nome, ordem: e.ordem,
+            funcionario_id: etapasResponsaveis[e.id] ? etapasResponsaveis[e.id] : null,
+          }));
         await supabase.from("os_etapas").insert(ep);
       }
       if (itens.length > 0) {
@@ -263,15 +268,28 @@ export function NovaOS({ onSaved }) {
                 <Layers size={13} style={{ verticalAlign: "middle", marginRight: 4 }} /> Etapas do Serviço
               </p>
               {etapasDisponiveis.map((et, i) => (
-                <label key={et.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7, cursor: "pointer" }}>
-                  <div onClick={() => toggleEtapa(et.id)} style={{ cursor: "pointer", flexShrink: 0 }}>
-                    {etapasSelecionadas.includes(et.id)
-                      ? <CheckSquare size={17} color="#7C3AED" />
-                      : <Square size={17} color="#9CA3AF" />}
-                  </div>
-                  <span style={{ fontSize: 13, color: "#374151" }}>{i + 1}. {et.nome}</span>
-                  {et.duracao_estimada_horas && <span style={{ fontSize: 11, color: "#6B7280", marginLeft: "auto" }}>{et.duracao_estimada_horas}h</span>}
-                </label>
+                <div key={et.id} style={{ marginBottom: 10, background: etapasSelecionadas.includes(et.id) ? "#EDE9FE" : "transparent", borderRadius: 8, padding: etapasSelecionadas.includes(et.id) ? "8px 10px" : "4px 10px", transition: "all 0.2s" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: etapasSelecionadas.includes(et.id) ? 6 : 0 }}>
+                    <div onClick={() => toggleEtapa(et.id)} style={{ cursor: "pointer", flexShrink: 0 }}>
+                      {etapasSelecionadas.includes(et.id)
+                        ? <CheckSquare size={17} color="#7C3AED" />
+                        : <Square size={17} color="#9CA3AF" />}
+                    </div>
+                    <span style={{ fontSize: 13, color: "#374151", flex: 1 }}>{i + 1}. {et.nome}</span>
+                    {et.duracao_estimada_horas && <span style={{ fontSize: 11, color: "#6B7280" }}>{et.duracao_estimada_horas}h</span>}
+                    {et.duracao_estimada_minutos && <span style={{ fontSize: 11, color: "#6B7280" }}>{et.duracao_estimada_minutos}min</span>}
+                  </label>
+                  {etapasSelecionadas.includes(et.id) && (
+                    <select
+                      style={{ width: "100%", padding: "4px 8px", border: "1px solid #DDD6FE", borderRadius: 6, fontSize: 12, background: "#fff", color: "#374151" }}
+                      value={etapasResponsaveis[et.id] || ""}
+                      onChange={e => setEtapasResponsaveis(prev => ({ ...prev, [et.id]: e.target.value }))}
+                    >
+                      <option value="">— Responsável pela etapa (opcional) —</option>
+                      {refs.funcionarios?.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                    </select>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -553,9 +571,19 @@ export function OSDetalhe({ os, onClose }) {
   const [status, setStatus] = useState(os.status);
   const [loading, setLoading] = useState(false);
   const [showInstaladorModal, setShowInstaladorModal] = useState(false);
+  const [showProducaoModal, setShowProducaoModal] = useState(false);
+  const [showConclusaoModal, setShowConclusaoModal] = useState(false);
+  const [showRetrabalhoModal, setShowRetrabalhoModal] = useState(false);
   const [funcionarios, setFuncionarios] = useState([]);
   const [instaladorId, setInstaladorId] = useState("");
   const [horarioInstalacao, setHorarioInstalacao] = useState("");
+  // Conclusão
+  const [nomeRecebedor, setNomeRecebedor] = useState("");
+  const [entregue, setEntregue] = useState(false);
+  const [dataEntregaReal, setDataEntregaReal] = useState("");
+  // Retrabalho
+  const [motivoRetrabalho, setMotivoRetrabalho] = useState("");
+  const [cobrarRetrabalho, setCobrarRetrabalho] = useState(false);
 
   useEffect(() => {
     supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome")
@@ -566,7 +594,7 @@ export function OSDetalhe({ os, onClose }) {
 
   const loadDetalhes = async () => {
     const [{ data: et }, { data: hist }, { data: it }] = await Promise.all([
-      supabase.from("os_etapas").select("*").eq("os_id", os.id).order("ordem"),
+      supabase.from("os_etapas").select("*, funcionarios(nome)").eq("os_id", os.id).order("ordem"),
       supabase.from("os_historico").select("*, usuarios(funcionarios(nome))").eq("os_id", os.id).order("created_at", { ascending: false }),
       supabase.from("os_itens").select("*").eq("os_id", os.id),
     ]);
@@ -581,6 +609,67 @@ export function OSDetalhe({ os, onClose }) {
     loadDetalhes();
   };
 
+  const confirmarProducao = async (tipoProducao) => {
+    setShowProducaoModal(false);
+    const novoStatus = tipoProducao === "interna" ? "producao_interna" : "producao_externa";
+    await executarSalvarStatus(novoStatus, null);
+  };
+
+  const confirmarConclusao = async () => {
+    if (entregue && !nomeRecebedor.trim()) {
+      toast.error("⚠️ Informe o nome de quem recebeu o serviço.");
+      return;
+    }
+    setShowConclusaoModal(false);
+    setLoading(true);
+    try {
+      const extra = {
+        data_conclusao: new Date().toISOString(),
+        entregue,
+        nome_recebedor: entregue ? nomeRecebedor.trim() : null,
+        data_entrega_real: entregue && dataEntregaReal ? dataEntregaReal : (entregue ? new Date().toISOString() : null),
+      };
+      const { error } = await supabase.from("ordens_servico").update({ status: "concluida", ...extra }).eq("id", os.id);
+      if (error) throw error;
+      const anterior = STATUS_CONFIG[os.status]?.label || os.status;
+      await supabase.from("os_historico").insert({
+        os_id: os.id, usuario_id: usuario?.id || null,
+        tipo_evento: "status_alterado",
+        descricao: `Status alterado: ${anterior} → Concluída${entregue ? ` · Entregue para: ${nomeRecebedor}` : ""}`,
+        valor_anterior: os.status, valor_novo: "concluida",
+      });
+      toast.success(`✅ OS concluída!${entregue ? ` Entregue para ${nomeRecebedor}` : ""}`);
+      onClose();
+    } catch (err) { toast.error("Erro: " + err.message); }
+    finally { setLoading(false); }
+  };
+
+  const confirmarRetrabalho = async () => {
+    if (!motivoRetrabalho.trim()) { toast.error("⚠️ Informe o motivo do retrabalho."); return; }
+    setShowRetrabalhoModal(false);
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("ordens_servico")
+        .update({ status: "retrabalho", tem_retrabalho: true, motivo_retrabalho: motivoRetrabalho.trim(), cobrar_retrabalho: cobrarRetrabalho })
+        .eq("id", os.id);
+      if (error) throw error;
+      await supabase.from("os_historico").insert({
+        os_id: os.id, usuario_id: usuario?.id || null,
+        tipo_evento: "status_alterado",
+        descricao: `Retrabalho: ${motivoRetrabalho}`,
+        valor_anterior: os.status, valor_novo: "retrabalho",
+      });
+      toast.success("🔄 OS enviada para Retrabalho!");
+      onClose();
+    } catch (err) { toast.error("Erro: " + err.message); }
+    finally { setLoading(false); }
+  };
+
+  const reabrirOS = async () => {
+    if (!confirm("Reabrir esta OS para retrabalho?")) return;
+    setShowRetrabalhoModal(true);
+  };
+
   const confirmarInstalador = async () => {
     if (!instaladorId) { toast.error("⚠️ Selecione o responsável pela instalação."); return; }
     setShowInstaladorModal(false);
@@ -589,10 +678,10 @@ export function OSDetalhe({ os, onClose }) {
 
   const salvarStatus = async () => {
     if (status === os.status) { toast("Status não foi alterado."); return; }
-    if (status === "em_instalacao") {
-      setShowInstaladorModal(true);
-      return;
-    }
+    if (status === "em_instalacao") { setShowInstaladorModal(true); return; }
+    if (status === "producao_interna" || status === "producao_externa") { setShowProducaoModal(true); return; }
+    if (status === "concluida") { setShowConclusaoModal(true); return; }
+    if (status === "retrabalho") { setShowRetrabalhoModal(true); return; }
     await executarSalvarStatus(status, null);
   };
 
@@ -642,6 +731,8 @@ export function OSDetalhe({ os, onClose }) {
     ["Nº OS Externo",     os.numero_os_externo],
     ["Resp. Instalação",  os.resp_instalacao?.nome],
     ["Horário Instalação", os.horario_instalacao ? new Date(os.horario_instalacao).toLocaleString("pt-BR") : null],
+    ["Entregue a",         os.entregue && os.nome_recebedor ? `${os.nome_recebedor}${os.data_entrega_real ? " em " + new Date(os.data_entrega_real).toLocaleString("pt-BR") : ""}` : null],
+    ["Retrabalho",         os.tem_retrabalho ? `${os.motivo_retrabalho || "Sim"}${os.cobrar_retrabalho ? " · Cobrado" : " · Não cobrado"}` : null],
     ["Desconto",          (os.desconto_valor > 0 || os.desconto_percentual > 0) ? `${fmt(os.desconto_valor)} (${os.desconto_percentual}%)` : null],
     ["Valor Total",       fmt(os.valor_total)],
   ].filter(([, v]) => v);
@@ -666,7 +757,15 @@ export function OSDetalhe({ os, onClose }) {
             </select>
             <button onClick={salvarStatus} disabled={loading} style={btnPrimary}>{loading ? "..." : "Salvar"}</button>
           </div>
-          <div style={{ marginBottom: 12 }}><StatusBadge status={os.status} size="lg" /></div>
+          <div style={{ marginBottom: 12, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+            <StatusBadge status={os.status} size="lg" />
+            {(os.status === "concluida" || os.status === "cancelada") && (
+              <button onClick={reabrirOS}
+                style={{ background:"#FFF1F2", color:"#BE123C", border:"1px solid #FDA4AF", padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                🔄 Reabrir para Retrabalho
+              </button>
+            )}
+          </div>
           {/* Mostra responsável pela instalação se status for em_instalacao */}
           {os.status === "em_instalacao" && (os.resp_instalacao?.nome || os.horario_instalacao) && (
             <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
@@ -706,12 +805,19 @@ export function OSDetalhe({ os, onClose }) {
         <div style={{ marginBottom: 18 }}>
           <h4 style={{ margin: "0 0 8px", fontSize: 12, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>Etapas</h4>
           {etapas.map((et, i) => (
-            <div key={et.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, marginBottom: 5, background: et.concluida ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${et.concluida ? "#86EFAC" : "#E5E7EB"}` }}>
-              <button onClick={() => toggleEtapa(et)} style={{ border: "none", background: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
-                {et.concluida ? <CheckSquare size={17} color="#16A34A" /> : <Square size={17} color="#9CA3AF" />}
-              </button>
-              <span style={{ fontSize: 13, flex: 1, textDecoration: et.concluida ? "line-through" : "none", color: et.concluida ? "#6B7280" : "#374151" }}>{i + 1}. {et.nome_etapa}</span>
-              {et.concluida && <span style={{ fontSize: 11, color: "#16A34A" }}>{fmtDate(et.data_conclusao)}</span>}
+            <div key={et.id} style={{ padding: "9px 12px", borderRadius: 8, marginBottom: 5, background: et.concluida ? "#F0FDF4" : "#F9FAFB", border: `1px solid ${et.concluida ? "#86EFAC" : "#E5E7EB"}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <button onClick={() => toggleEtapa(et)} style={{ border:"none", background:"none", cursor:"pointer", padding:0, flexShrink:0 }}>
+                  {et.concluida ? <CheckSquare size={17} color="#16A34A" /> : <Square size={17} color="#9CA3AF" />}
+                </button>
+                <span style={{ fontSize:13, flex:1, textDecoration: et.concluida ? "line-through" : "none", color: et.concluida ? "#6B7280" : "#374151" }}>{i + 1}. {et.nome_etapa}</span>
+                {et.concluida && <span style={{ fontSize:11, color:"#16A34A" }}>{fmtDate(et.data_conclusao)}</span>}
+              </div>
+              {et.funcionarios?.nome && (
+                <div style={{ fontSize:11, color:"#7C3AED", marginLeft:27, marginTop:3, fontWeight:600 }}>
+                  👤 Responsável: {et.funcionarios.nome}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -740,6 +846,96 @@ export function OSDetalhe({ os, onClose }) {
           ))}
         </div>
       )}
+      {/* Modal: Tipo de Produção */}
+      {showProducaoModal && (
+        <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(15,23,42,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:20, maxWidth:420, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding:"20px 24px", background:"#F5F3FF", borderBottom:"2px solid #DDD6FE" }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>Tipo de Produção</div>
+              <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>Como esta OS será produzida?</div>
+            </div>
+            <div style={{ padding:"24px", display:"flex", flexDirection:"column", gap:14 }}>
+              <button onClick={() => confirmarProducao("interna")}
+                style={{ background:"#7C3AED", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                🏭 Produção Interna
+                <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— realizada na empresa</span>
+              </button>
+              <button onClick={() => confirmarProducao("externa")}
+                style={{ background:"#0EA5E9", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                🚚 Produção Externa
+                <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— terceirizada</span>
+              </button>
+              <button onClick={() => setShowProducaoModal(false)}
+                style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 20px", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer" }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Conclusão / Entrega */}
+      {showConclusaoModal && (
+        <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(15,23,42,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:20, maxWidth:440, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding:"20px 24px", background:"#DCFCE7", borderBottom:"2px solid #86EFAC" }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>✅ Concluir OS #{os.numero_os}</div>
+              <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>Informe os dados de entrega</div>
+            </div>
+            <div style={{ padding:"20px 24px" }}>
+              <label style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16, cursor:"pointer", background:"#F0FDF4", padding:"12px 14px", borderRadius:10, border:"1px solid #86EFAC" }}>
+                <input type="checkbox" checked={entregue} onChange={e => setEntregue(e.target.checked)} style={{ width:18, height:18 }} />
+                <span style={{ fontSize:14, fontWeight:600, color:"#166534" }}>Serviço foi entregue ao cliente</span>
+              </label>
+              {entregue && (<>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Nome de quem recebeu *</label>
+                  <input value={nomeRecebedor} onChange={e => setNomeRecebedor(e.target.value)} placeholder="Nome completo do recebedor"
+                    style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #D1D5DB", borderRadius:8, fontSize:14, boxSizing:"border-box" }} />
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Data e hora da entrega</label>
+                  <input type="datetime-local" value={dataEntregaReal} onChange={e => setDataEntregaReal(e.target.value)}
+                    style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #D1D5DB", borderRadius:8, fontSize:14, boxSizing:"border-box" }} />
+                </div>
+              </>)}
+            </div>
+            <div style={{ padding:"14px 24px", borderTop:"1px solid #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setShowConclusaoModal(false)} style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 18px", borderRadius:8, fontSize:14, fontWeight:600, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={confirmarConclusao} style={{ background:"#16A34A", color:"#fff", border:"none", padding:"10px 20px", borderRadius:8, fontSize:14, fontWeight:700, cursor:"pointer" }}>✅ Confirmar Conclusão</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Retrabalho */}
+      {showRetrabalhoModal && (
+        <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(15,23,42,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:20, maxWidth:440, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding:"20px 24px", background:"#FFF1F2", borderBottom:"2px solid #FDA4AF" }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>🔄 Retrabalho — OS #{os.numero_os}</div>
+              <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>Informe o motivo e se os custos serão cobrados</div>
+            </div>
+            <div style={{ padding:"20px 24px" }}>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Motivo do retrabalho *</label>
+                <textarea value={motivoRetrabalho} onChange={e => setMotivoRetrabalho(e.target.value)}
+                  placeholder="Descreva o que precisa ser refeito..."
+                  style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #FDA4AF", borderRadius:8, fontSize:14, boxSizing:"border-box", minHeight:80, resize:"vertical" }} />
+              </div>
+              <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", background:"#FFF1F2", padding:"12px 14px", borderRadius:10, border:"1px solid #FDA4AF" }}>
+                <input type="checkbox" checked={cobrarRetrabalho} onChange={e => setCobrarRetrabalho(e.target.checked)} style={{ width:18, height:18 }} />
+                <span style={{ fontSize:14, fontWeight:600, color:"#BE123C" }}>Cobrar custos do retrabalho do cliente</span>
+              </label>
+            </div>
+            <div style={{ padding:"14px 24px", borderTop:"1px solid #E5E7EB", display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setShowRetrabalhoModal(false)} style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 18px", borderRadius:8, fontSize:14, fontWeight:600, cursor:"pointer" }}>Cancelar</button>
+              <button onClick={confirmarRetrabalho} style={{ background:"#E11D48", color:"#fff", border:"none", padding:"10px 20px", borderRadius:8, fontSize:14, fontWeight:700, cursor:"pointer" }}>🔄 Enviar p/ Retrabalho</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal: responsável pela instalação */}
       {showInstaladorModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,23,42,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>

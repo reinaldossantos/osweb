@@ -134,6 +134,7 @@ export function EtapasForm({ item, onSaved, onClose }) {
     servico_id: item?.servico_id || "", nome: item?.nome || "",
     descricao: item?.descricao || "", ordem: item?.ordem || 0,
     duracao_estimada_horas: item?.duracao_estimada_horas || "",
+    duracao_estimada_minutos: item?.duracao_estimada_minutos || "",
   });
   const [servicos, setServicos] = useState([]);
 
@@ -144,9 +145,17 @@ export function EtapasForm({ item, onSaved, onClose }) {
 
   const save = async (e) => {
     e.preventDefault();
+    const payload = {
+      servico_id: form.servico_id,
+      nome: form.nome,
+      descricao: form.descricao || null,
+      ordem: parseInt(form.ordem) || 0,
+      duracao_estimada_horas: parseFloat(form.duracao_estimada_horas) || null,
+      duracao_estimada_minutos: parseFloat(form.duracao_estimada_minutos) || null,
+    };
     const op = item
-      ? supabase.from("etapas_servico").update(form).eq("id", item.id)
-      : supabase.from("etapas_servico").insert(form);
+      ? supabase.from("etapas_servico").update(payload).eq("id", item.id)
+      : supabase.from("etapas_servico").insert(payload);
     const { error } = await op;
     if (!error) onSaved(); else toast.error(error.message);
   };
@@ -162,12 +171,15 @@ export function EtapasForm({ item, onSaved, onClose }) {
       <FormField label="Nome da Etapa" required>
         <input style={inputStyle} value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} required />
       </FormField>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <FormField label="Ordem">
           <input type="number" style={inputStyle} value={form.ordem} onChange={e => setForm({ ...form, ordem: e.target.value })} min="0" />
         </FormField>
-        <FormField label="Duração Estimada (h)">
-          <input type="number" style={inputStyle} value={form.duracao_estimada_horas} onChange={e => setForm({ ...form, duracao_estimada_horas: e.target.value })} min="0" step="0.5" />
+        <FormField label="Duração (horas)">
+          <input type="number" style={inputStyle} value={form.duracao_estimada_horas} onChange={e => setForm({ ...form, duracao_estimada_horas: e.target.value })} min="0" step="0.5" placeholder="Ex: 1.5" />
+        </FormField>
+        <FormField label="Duração (minutos)">
+          <input type="number" style={inputStyle} value={form.duracao_estimada_minutos} onChange={e => setForm({ ...form, duracao_estimada_minutos: e.target.value })} min="0" step="5" placeholder="Ex: 30" />
         </FormField>
       </div>
       <FormField label="Descrição">
