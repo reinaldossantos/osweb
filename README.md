@@ -289,3 +289,87 @@ Total OS · Concluídas · Canceladas · Histórico · Itens · Etapas OS · Cli
 | 7 | `seed_corrigido.sql` | Opcional — recarrega dados de seed |
 
 > ⚠️ Os arquivos de migração (3 a 6) são **obrigatórios** para quem já tinha o sistema instalado anteriormente.
+
+---
+
+## 📦 Fluxo Completo de Status (versão atual)
+
+```
+Em Aberto
+  → Aguard. Aprovação
+    → Aprovada
+      → Prod. Interna  ──┐
+      → Prod. Externa  ──┤→ Em Produção → Acabamento → Em Instalação → Concluída
+                         └──────────────────────────────────────────→ Cancelada
+                                                                     → Retrabalho
+                                                                       └→ (retorna ao fluxo)
+```
+
+---
+
+## 🔧 Funcionalidades Detalhadas — Versão Atual
+
+### 👷 Responsável por Etapa
+- Ao lançar uma OS, cada etapa selecionada permite atribuir um **funcionário responsável**
+- O responsável fica registrado na etapa e visível no detalhe da OS
+- Serve para mensurar a produção individual de cada colaborador
+
+### 🏭 Produção Interna / Produção Externa
+Ao alterar o status para "Em Produção", aparece modal com duas etapas:
+
+**Passo 1:** Escolha o tipo:
+- 🏭 **Produção Interna** — realizada na empresa
+- 🚚 **Produção Externa** — terceirizada
+
+**Passo 2:** Selecione as etapas específicas para esse tipo de produção (carregadas do serviço base) e atribua responsáveis por etapa.
+
+### ✂️ Acabamento
+Novo status entre Em Instalação e Concluída para registrar a fase de acabamento do serviço.
+
+### ✅ Conclusão com Entrega
+Ao concluir uma OS, aparece modal de entrega:
+- Checkbox: "Serviço foi entregue ao cliente"
+- Nome completo de quem recebeu
+- Data e hora da entrega
+
+### 🔄 Retrabalho
+Ao reabrir uma OS concluída ou cancelada para retrabalho:
+- Motivo obrigatório
+- Adicionar **novos itens/produtos/insumos** com valores
+- Checkbox: "Cobrar do cliente?"
+- O valor do retrabalho fica registrado separadamente na OS
+- Histórico registra o retrabalho com valor e decisão de cobrança
+
+---
+
+## 📊 Relatórios — 8 Abas
+
+| Aba | Conteúdo |
+|---|---|
+| Por Status | Cards clicáveis → lista filtrada → detalhe da OS |
+| Por Cliente | Ranking com barras de percentual |
+| Por Tipo OS | Qtd, % total, valor e ticket médio |
+| Financeiro | Totais + Top 10 por valor |
+| **Por Colaborador** | OS lançadas, concluídas, retrabalhos, taxa de conclusão e valor por funcionário |
+| **Retrabalhos** | Lista completa com motivo, valor, se foi cobrado, responsável |
+| Instalações | Responsável, horário previsto, status |
+| Lista Completa | Todas as OS com "Finalizado por" e "Lançado por" |
+
+---
+
+## 📄 Arquivos SQL — Ordem Completa de Execução
+
+| # | Arquivo | Descrição |
+|---|---|---|
+| 1 | `supabase_schema.sql` | Criação inicial |
+| 2 | `correcao_historico.sql` | Histórico com usuário |
+| 3 | `migracao_status.sql` | `aguardando` → `em_aberto`, adiciona `aprovada` |
+| 4 | `migracao_novos_campos.sql` | `cidade`, `numero_os_externo`, Cheque, Bonificação |
+| 5 | `migracao_em_instalacao.sql` | Status `em_instalacao` |
+| 6 | `migracao_responsavel_instalacao.sql` | Campo `responsavel_instalacao_id` |
+| 7 | `migracao_horario_instalacao.sql` | Campo `horario_instalacao` |
+| 8 | `migracao_campos_os_v2.sql` | `estado`, `desconto_valor`, `desconto_percentual` |
+| 9 | `migracao_novos_status_e_campos.sql` | Todos os novos status + campos de entrega e retrabalho |
+| 10 | `seed_corrigido.sql` | Opcional — dados de seed |
+
+> ⚠️ Execute obrigatoriamente do 1 ao 9 em ordem para instalação completa.

@@ -577,11 +577,6 @@ export function OSDetalhe({ os, onClose }) {
   const [funcionarios, setFuncionarios] = useState([]);
   const [instaladorId, setInstaladorId] = useState("");
   const [horarioInstalacao, setHorarioInstalacao] = useState("");
-  // Produção
-  const [etapasProducaoDisponiveis, setEtapasProducaoDisponiveis] = useState([]);
-  const [etapasProducaoSelecionadas, setEtapasProducaoSelecionadas] = useState([]);
-  const [etapasProducaoResponsaveis, setEtapasProducaoResponsaveis] = useState({});
-  const [tipoProducaoSelecionado, setTipoProducaoSelecionado] = useState(null);
   // Conclusão
   const [nomeRecebedor, setNomeRecebedor] = useState("");
   const [entregue, setEntregue] = useState(false);
@@ -589,17 +584,10 @@ export function OSDetalhe({ os, onClose }) {
   // Retrabalho
   const [motivoRetrabalho, setMotivoRetrabalho] = useState("");
   const [cobrarRetrabalho, setCobrarRetrabalho] = useState(false);
-  const [itensRetrabalho, setItensRetrabalho] = useState([]);
-  const [servicos, setServicos] = useState([]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome"),
-      supabase.from("servicos").select("id, nome, valor_base").eq("ativo", true).order("nome"),
-    ]).then(([{ data: funcs }, { data: svcs }]) => {
-      setFuncionarios(funcs || []);
-      setServicos(svcs || []);
-    });
+    supabase.from("funcionarios").select("id, nome").eq("ativo", true).order("nome")
+      .then(({ data }) => setFuncionarios(data || []));
   }, []);
 
   useEffect(() => { loadDetalhes(); }, []);
@@ -621,54 +609,10 @@ export function OSDetalhe({ os, onClose }) {
     loadDetalhes();
   };
 
-  const selecionarTipoProducao = async (tipoProducao) => {
-    setTipoProducaoSelecionado(tipoProducao);
-    // Load all etapas from the servico base da OS, or all if no servico
-    const query = os.servico_id
-      ? supabase.from("etapas_servico").select("*").eq("servico_id", os.servico_id).eq("ativo", true).order("ordem")
-      : supabase.from("etapas_servico").select("*, servicos(nome)").eq("ativo", true).order("ordem");
-    const { data } = await query;
-    setEtapasProducaoDisponiveis(data || []);
-    setEtapasProducaoSelecionadas((data || []).map(e => e.id));
-  };
-
-  const confirmarProducao = async () => {
-    const tipoProducao = tipoProducaoSelecionado;
+  const confirmarProducao = async (tipoProducao) => {
     setShowProducaoModal(false);
-    setLoading(true);
-    try {
-      const novoStatus = tipoProducao === "interna" ? "producao_interna" : "producao_externa";
-      const { error } = await supabase.from("ordens_servico")
-        .update({ status: novoStatus, tipo_producao: tipoProducao })
-        .eq("id", os.id);
-      if (error) throw error;
-
-      // Insert selected steps for this production
-      if (etapasProducaoSelecionadas.length > 0) {
-        const epToInsert = etapasProducaoDisponiveis
-          .filter(e => etapasProducaoSelecionadas.includes(e.id))
-          .map(e => ({
-            os_id: os.id, etapa_id: e.id, nome_etapa: e.nome, ordem: e.ordem,
-            funcionario_id: etapasProducaoResponsaveis[e.id] || null,
-          }));
-        if (epToInsert.length > 0) {
-          // Don't duplicate if already exist
-          await supabase.from("os_etapas").upsert(epToInsert, { onConflict: "os_id,etapa_id", ignoreDuplicates: true });
-        }
-      }
-
-      const anterior = STATUS_CONFIG[os.status]?.label || os.status;
-      const novo     = STATUS_CONFIG[novoStatus]?.label || novoStatus;
-      await supabase.from("os_historico").insert({
-        os_id: os.id, usuario_id: usuario?.id || null,
-        tipo_evento: "status_alterado",
-        descricao: `Status alterado: ${anterior} → ${novo} (${tipoProducao === "interna" ? "Produção Interna" : "Produção Externa"})`,
-        valor_anterior: os.status, valor_novo: novoStatus,
-      });
-      toast.success(`✅ OS em ${tipoProducao === "interna" ? "Produção Interna" : "Produção Externa"}!`);
-      onClose();
-    } catch (err) { toast.error("Erro: " + err.message); }
-    finally { setLoading(false); }
+    const novoStatus = tipoProducao === "interna" ? "producao_interna" : "producao_externa";
+    await executarSalvarStatus(novoStatus, null);
   };
 
   const confirmarConclusao = async () => {
@@ -700,59 +644,19 @@ export function OSDetalhe({ os, onClose }) {
     finally { setLoading(false); }
   };
 
-  const addItemRetrabalho = () => setItensRetrabalho(prev => [...prev, { servico_id: "", descricao: "", quantidade: 1, valor_unitario: 0 }]);
-  const removeItemRetrabalho = (i) => setItensRetrabalho(prev => prev.filter((_, idx) => idx !== i));
-  const updateItemRetrabalho = (i, field, value) => {
-    setItensRetrabalho(prev => {
-      const next = prev.map((it, idx) => {
-        if (idx !== i) return it;
-        const upd = { ...it, [field]: value };
-        if (field === "servico_id" && value) {
-          const svc = servicos.find(s => s.id === value);
-          if (svc) { upd.descricao = svc.nome; upd.valor_unitario = svc.valor_base; }
-        }
-        return upd;
-      });
-      return next;
-    });
-  };
-  const totalRetrabalho = itensRetrabalho.reduce((s, it) => s + (parseFloat(it.quantidade)||0)*(parseFloat(it.valor_unitario)||0), 0);
-
   const confirmarRetrabalho = async () => {
     if (!motivoRetrabalho.trim()) { toast.error("⚠️ Informe o motivo do retrabalho."); return; }
     setShowRetrabalhoModal(false);
     setLoading(true);
     try {
       const { error } = await supabase.from("ordens_servico")
-        .update({
-          status: "retrabalho", tem_retrabalho: true,
-          motivo_retrabalho: motivoRetrabalho.trim(),
-          cobrar_retrabalho: cobrarRetrabalho,
-          valor_retrabalho: totalRetrabalho,
-        })
+        .update({ status: "retrabalho", tem_retrabalho: true, motivo_retrabalho: motivoRetrabalho.trim(), cobrar_retrabalho: cobrarRetrabalho })
         .eq("id", os.id);
       if (error) throw error;
-
-      // Save retrabalho items as os_itens
-      if (itensRetrabalho.length > 0) {
-        await supabase.from("os_itens").insert(
-          itensRetrabalho
-            .filter(it => it.descricao?.trim())
-            .map(it => ({
-              os_id: os.id,
-              servico_id: uuidOuNull(it.servico_id),
-              descricao: it.descricao,
-              quantidade: parseFloat(it.quantidade) || 1,
-              valor_unitario: parseFloat(it.valor_unitario) || 0,
-              tipo: "retrabalho",
-            }))
-        );
-      }
-
       await supabase.from("os_historico").insert({
         os_id: os.id, usuario_id: usuario?.id || null,
         tipo_evento: "status_alterado",
-        descricao: `Retrabalho: ${motivoRetrabalho}${totalRetrabalho > 0 ? ` · Valor: R$ ${totalRetrabalho.toFixed(2)}` : ""}${cobrarRetrabalho ? " · Será cobrado" : " · Não cobrado"}`,
+        descricao: `Retrabalho: ${motivoRetrabalho}`,
         valor_anterior: os.status, valor_novo: "retrabalho",
       });
       toast.success("🔄 OS enviada para Retrabalho!");
@@ -945,83 +849,27 @@ export function OSDetalhe({ os, onClose }) {
       {/* Modal: Tipo de Produção */}
       {showProducaoModal && (
         <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(15,23,42,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div style={{ background:"#fff", borderRadius:20, maxWidth: tipoProducaoSelecionado ? 560 : 420, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
+          <div style={{ background:"#fff", borderRadius:20, maxWidth:420, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
             <div style={{ padding:"20px 24px", background:"#F5F3FF", borderBottom:"2px solid #DDD6FE" }}>
               <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>Tipo de Produção</div>
-              <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>
-                {tipoProducaoSelecionado
-                  ? `${tipoProducaoSelecionado === "interna" ? "🏭 Produção Interna" : "🚚 Produção Externa"} — selecione as etapas`
-                  : "Como esta OS será produzida?"}
-              </div>
+              <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>Como esta OS será produzida?</div>
             </div>
-
-            {!tipoProducaoSelecionado ? (
-              <div style={{ padding:"24px", display:"flex", flexDirection:"column", gap:14 }}>
-                <button onClick={() => selecionarTipoProducao("interna")}
-                  style={{ background:"#7C3AED", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
-                  🏭 Produção Interna
-                  <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— realizada na empresa</span>
-                </button>
-                <button onClick={() => selecionarTipoProducao("externa")}
-                  style={{ background:"#0EA5E9", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
-                  🚚 Produção Externa
-                  <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— terceirizada</span>
-                </button>
-                <button onClick={() => setShowProducaoModal(false)}
-                  style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 20px", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer" }}>
-                  Cancelar
-                </button>
-              </div>
-            ) : (
-              <div style={{ padding:"20px 24px" }}>
-                <p style={{ margin:"0 0 14px", fontSize:13, color:"#374151" }}>
-                  Selecione as etapas que serão realizadas nesta produção e atribua os responsáveis:
-                </p>
-                <div style={{ maxHeight:300, overflowY:"auto", marginBottom:16 }}>
-                  {etapasProducaoDisponiveis.length === 0 ? (
-                    <p style={{ color:"#9CA3AF", fontSize:13, textAlign:"center", padding:20 }}>
-                      Nenhuma etapa cadastrada para este serviço.
-                      <br/>A OS será enviada para produção sem etapas.
-                    </p>
-                  ) : etapasProducaoDisponiveis.map((et, i) => (
-                    <div key={et.id} style={{ marginBottom:10, background: etapasProducaoSelecionadas.includes(et.id) ? "#EDE9FE":"#F9FAFB", borderRadius:8, padding:"8px 12px", border:`1px solid ${etapasProducaoSelecionadas.includes(et.id)?"#DDD6FE":"#E5E7EB"}`, transition:"all 0.2s" }}>
-                      <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", marginBottom: etapasProducaoSelecionadas.includes(et.id) ? 6 : 0 }}>
-                        <input type="checkbox"
-                          checked={etapasProducaoSelecionadas.includes(et.id)}
-                          onChange={e => setEtapasProducaoSelecionadas(prev => e.target.checked ? [...prev, et.id] : prev.filter(id => id !== et.id))}
-                          style={{ width:16, height:16 }}
-                        />
-                        <span style={{ fontSize:13, fontWeight:500, flex:1 }}>{i+1}. {et.nome}</span>
-                        <span style={{ fontSize:11, color:"#6B7280" }}>
-                          {et.duracao_estimada_horas ? `${et.duracao_estimada_horas}h` : ""}
-                          {et.duracao_estimada_minutos ? ` ${et.duracao_estimada_minutos}min` : ""}
-                        </span>
-                      </label>
-                      {etapasProducaoSelecionadas.includes(et.id) && (
-                        <select
-                          value={etapasProducaoResponsaveis[et.id] || ""}
-                          onChange={e => setEtapasProducaoResponsaveis(prev => ({ ...prev, [et.id]: e.target.value }))}
-                          style={{ width:"100%", padding:"4px 8px", border:"1px solid #DDD6FE", borderRadius:6, fontSize:12, background:"#fff" }}
-                        >
-                          <option value="">— Responsável pela etapa (opcional) —</option>
-                          {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-                  <button onClick={() => setTipoProducaoSelecionado(null)}
-                    style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 16px", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                    ← Voltar
-                  </button>
-                  <button onClick={confirmarProducao}
-                    style={{ background: tipoProducaoSelecionado === "interna" ? "#7C3AED" : "#0EA5E9", color:"#fff", border:"none", padding:"10px 20px", borderRadius:8, fontSize:14, fontWeight:700, cursor:"pointer" }}>
-                    ✅ Confirmar {tipoProducaoSelecionado === "interna" ? "Prod. Interna" : "Prod. Externa"}
-                  </button>
-                </div>
-              </div>
-            )}
+            <div style={{ padding:"24px", display:"flex", flexDirection:"column", gap:14 }}>
+              <button onClick={() => confirmarProducao("interna")}
+                style={{ background:"#7C3AED", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                🏭 Produção Interna
+                <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— realizada na empresa</span>
+              </button>
+              <button onClick={() => confirmarProducao("externa")}
+                style={{ background:"#0EA5E9", color:"#fff", border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                🚚 Produção Externa
+                <span style={{ fontSize:12, opacity:0.8, fontWeight:400 }}>— terceirizada</span>
+              </button>
+              <button onClick={() => setShowProducaoModal(false)}
+                style={{ background:"#F3F4F6", color:"#374151", border:"1px solid #D1D5DB", padding:"10px 20px", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer" }}>
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1063,61 +911,18 @@ export function OSDetalhe({ os, onClose }) {
       {/* Modal: Retrabalho */}
       {showRetrabalhoModal && (
         <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(15,23,42,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div style={{ background:"#fff", borderRadius:20, maxWidth:620, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
+          <div style={{ background:"#fff", borderRadius:20, maxWidth:440, width:"100%", overflow:"hidden", boxShadow:"0 32px 80px rgba(0,0,0,0.3)" }}>
             <div style={{ padding:"20px 24px", background:"#FFF1F2", borderBottom:"2px solid #FDA4AF" }}>
               <div style={{ fontSize:16, fontWeight:800, color:"#0F172A" }}>🔄 Retrabalho — OS #{os.numero_os}</div>
               <div style={{ fontSize:13, color:"#6B7280", marginTop:4 }}>Informe o motivo e se os custos serão cobrados</div>
             </div>
-            <div style={{ padding:"20px 24px", maxHeight:"65vh", overflowY:"auto" }}>
+            <div style={{ padding:"20px 24px" }}>
               <div style={{ marginBottom:14 }}>
                 <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Motivo do retrabalho *</label>
                 <textarea value={motivoRetrabalho} onChange={e => setMotivoRetrabalho(e.target.value)}
                   placeholder="Descreva o que precisa ser refeito..."
-                  style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #FDA4AF", borderRadius:8, fontSize:14, boxSizing:"border-box", minHeight:70, resize:"vertical" }} />
+                  style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #FDA4AF", borderRadius:8, fontSize:14, boxSizing:"border-box", minHeight:80, resize:"vertical" }} />
               </div>
-
-              {/* Itens / Produtos do Retrabalho */}
-              <div style={{ marginBottom:14 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <label style={{ fontSize:13, fontWeight:600, color:"#374151" }}>Serviços / Produtos / Insumos</label>
-                  <button type="button" onClick={addItemRetrabalho}
-                    style={{ background:"#FFF1F2", color:"#BE123C", border:"1px solid #FDA4AF", padding:"4px 12px", borderRadius:6, fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                    + Adicionar Item
-                  </button>
-                </div>
-                {itensRetrabalho.map((it, i) => (
-                  <div key={i} style={{ background:"#FAFAFA", borderRadius:8, padding:"10px 12px", marginBottom:8, border:"1px solid #E5E7EB" }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"2fr 80px 100px auto", gap:6, marginBottom:4 }}>
-                      <input style={{ ...inputStyle, fontSize:12 }} value={it.descricao}
-                        onChange={e => updateItemRetrabalho(i, "descricao", e.target.value)}
-                        placeholder="Descrição do item" />
-                      <input type="number" style={{ ...inputStyle, fontSize:12 }} value={it.quantidade}
-                        onChange={e => updateItemRetrabalho(i, "quantidade", e.target.value)}
-                        placeholder="Qtd" min="0.001" step="0.001" />
-                      <input type="number" style={{ ...inputStyle, fontSize:12 }} value={it.valor_unitario}
-                        onChange={e => updateItemRetrabalho(i, "valor_unitario", e.target.value)}
-                        placeholder="Valor unit." min="0" step="0.01" />
-                      <button type="button" onClick={() => removeItemRetrabalho(i)}
-                        style={{ background:"#FEE2E2", color:"#991B1B", border:"none", borderRadius:6, width:30, cursor:"pointer", fontSize:14 }}>✕</button>
-                    </div>
-                    <select style={{ ...inputStyle, fontSize:11, marginBottom:2 }}
-                      value={it.servico_id}
-                      onChange={e => updateItemRetrabalho(i, "servico_id", e.target.value)}>
-                      <option value="">Vincular a serviço do catálogo (opcional)</option>
-                      {servicos.map(s => <option key={s.id} value={s.id}>{s.nome} — R$ {s.valor_base}</option>)}
-                    </select>
-                    <div style={{ fontSize:11, color:"#6B7280", textAlign:"right" }}>
-                      Subtotal: R$ {((parseFloat(it.quantidade)||0)*(parseFloat(it.valor_unitario)||0)).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-                {itensRetrabalho.length > 0 && (
-                  <div style={{ background:"#FFF1F2", borderRadius:8, padding:"8px 12px", textAlign:"right", fontSize:13, fontWeight:700, color:"#BE123C" }}>
-                    Total do Retrabalho: R$ {totalRetrabalho.toFixed(2)}
-                  </div>
-                )}
-              </div>
-
               <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", background:"#FFF1F2", padding:"12px 14px", borderRadius:10, border:"1px solid #FDA4AF" }}>
                 <input type="checkbox" checked={cobrarRetrabalho} onChange={e => setCobrarRetrabalho(e.target.checked)} style={{ width:18, height:18 }} />
                 <span style={{ fontSize:14, fontWeight:600, color:"#BE123C" }}>Cobrar custos do retrabalho do cliente</span>
