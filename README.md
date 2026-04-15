@@ -370,6 +370,7 @@ Ao reabrir uma OS concluída ou cancelada para retrabalho:
 | 7 | `migracao_horario_instalacao.sql` | Campo `horario_instalacao` |
 | 8 | `migracao_campos_os_v2.sql` | `estado`, `desconto_valor`, `desconto_percentual` |
 | 9 | `migracao_novos_status_e_campos.sql` | Todos os novos status + campos de entrega e retrabalho |
-| 10 | `seed_corrigido.sql` | Opcional — dados de seed |
+| 10 | `migracao_indexes_estado_horario.sql` | Índices para `estado`, `cidade` e `horario_instalacao` |
+| 11 | `seed_corrigido.sql` | Opcional — dados de seed |
 
-> ⚠️ Execute obrigatoriamente do 1 ao 9 em ordem para instalação completa.
+> ⚠️ Execute obrigatoriamente do 1 ao 10 em ordem para instalação completa.
